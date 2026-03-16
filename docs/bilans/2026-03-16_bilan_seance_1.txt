@@ -1,0 +1,29 @@
+Bilan de séance - Projet Tchat INFO834
+Date : 16 Mars 2026
+
+MEMBRES PRÉSENTS :
+
+makboul othmane
+
+MEMBRES ABSENTS :
+
+zakaria rahou
+amine abidi
+
+ÉTAT D'AVANCEMENT / OBJECTIFS :
+Fort. L'infrastructure de base (réseau de serveurs, conteneurs, configuration) et les connexions aux bases de données sont 100% opérationnelles.
+
+TRAVAIL FAIT DEPUIS LA SÉANCE PRÉCÉDENTE :
+
+Séance 1 : Initialisation du projet.
+
+Création du dépôt Git et de l'arborescence (app, tests, docs).
+
+Création du fichier docker-compose.yml pour l'orchestration.
+
+Mise en place du serveur Redis pour le futur historique des connexions.
+
+Configuration du réseau de serveurs MongoDB (3 nœuds) et initialisation du ReplicaSet pour la tolérance aux pannes.
+
+Écriture et test du module de connexion Python (database.py) avec pymongo et redis.
+
