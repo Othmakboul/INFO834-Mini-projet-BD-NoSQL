@@ -1,9 +1,9 @@
-from database import get_redis_client, get_mongo_db
+from database import redis_connection, get_mongo_connection
 import datetime
 
 def tester_redis():
     print("--- Test Redis ---")
-    client = get_redis_client()
+    client = redis_connection()
     
     client.set("othmane", "en ligne")
     
@@ -13,7 +13,7 @@ def tester_redis():
 
 def tester_mongo():
     print("\n Test MongoDB ")
-    db = get_mongo_db()
+    db = get_mongo_connection()
     
     collection = db["messages_test"]
     
