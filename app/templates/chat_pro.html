@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChatPro · Live</title>
+
+    <!-- ═══════════════════════════════════════════
+       DÉPENDANCES EXTERNES
+  ═══════════════════════════════════════════ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap"
+        rel="stylesheet" />
+
+    <!-- ═══════════════════════════════════════════
+       CONFIGURATION TAILWIND (THÈME ÉTENDU)
+  ═══════════════════════════════════════════ -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Syne', 'sans-serif'],
+                        body: ['DM Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        void: '#050A18',
+                        abyss: '#080F24',
+                        deep: '#0C1535',
+                        slate: '#111D3F',
+                        mid: '#1A2A52',
+                        rim: '#243563',
+                        ink: '#2E4180',
+                        azure: '#3B5FBD',
+                        cobalt: '#4B79E4',
+                        ice: '#6B9BF7',
+                        frost: '#A8C4FF',
+                        ghost: 'rgba(255,255,255,0.06)',
+                        haze: 'rgba(255,255,255,0.10)',
+                        veil: 'rgba(255,255,255,0.04)',
+                    },
+                    backdropBlur: { xs: '2px' },
+                    boxShadow: {
+                        glass: '0 4px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)',
+                        glow: '0 0 24px rgba(75,121,228,0.35)',
+                        'glow-sm': '0 0 12px rgba(75,121,228,0.25)',
+                        bubble: '0 2px 16px rgba(0,0,0,0.4)',
+                    },
+                    animation: {
+                        'pulse-dot': 'pulseDot 2s ease-in-out infinite',
+                        'slide-up': 'slideUp 0.35s cubic-bezier(0.16,1,0.3,1) forwards',
+                        'fade-in': 'fadeIn 0.4s ease forwards',
+                        'banner-in': 'bannerIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards',
+                        'banner-out': 'bannerOut 0.4s ease forwards',
+                        'spin-slow': 'spin 3s linear infinite',
+                    },
+                    keyframes: {
+                        pulseDot: {
+                            '0%,100%': { opacity: '1', transform: 'scale(1)' },
+                            '50%': { opacity: '0.4', transform: 'scale(0.75)' },
+                        },
+                        slideUp: {
+                            from: { opacity: '0', transform: 'translateY(16px)' },
+                            to: { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        fadeIn: {
+                            from: { opacity: '0' },
+                            to: { opacity: '1' },
+                        },
+                        bannerIn: {
+                            from: { opacity: '0', transform: 'translateY(-12px)' },
+                            to: { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        bannerOut: {
+                            from: { opacity: '1', transform: 'translateY(0)' },
+                            to: { opacity: '0', transform: 'translateY(-12px)' },
+                        },
+                    },
+                },
+            },
+        };
+    </script>
+
+    <style>
+        /* ═══════════════════════════════════════════
+       STYLES GLOBAUX & UTILITAIRES CUSTOM
+    ═══════════════════════════════════════════ */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            background: #050A18;
+            color: #E8EEFF;
+            overflow: hidden;
+        }
+
+        /* Fond animé — nébuleuse de points de lumière */
+        #starfield {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        #starfield::before,
+        #starfield::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.18;
+            animation: drift 12s ease-in-out infinite alternate;
+        }
+
+        #starfield::before {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, #3B5FBD 0%, transparent 70%);
+            top: -100px;
+            left: -100px;
+        }
+
+        #starfield::after {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #243563 0%, transparent 70%);
+            bottom: -80px;
+            right: -80px;
+            animation-delay: -6s;
+        }
+
+        @keyframes drift {
+            from {
+                transform: translate(0, 0) scale(1);
+            }
+
+            to {
+                transform: translate(40px, 30px) scale(1.1);
+            }
+        }
+
+        /* Verre */
+        .glass {
+            background: rgba(12, 21, 53, 0.55);
+            backdrop-filter: blur(20px) saturate(160%);
+            -webkit-backdrop-filter: blur(20px) saturate(160%);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .glass-light {
+            background: rgba(26, 42, 82, 0.45);
+            backdrop-filter: blur(14px) saturate(140%);
+            -webkit-backdrop-filter: blur(14px) saturate(140%);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+        }
+
+        .glass-input {
+            background: rgba(8, 15, 36, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .glass-input:focus {
+            outline: none;
+            border-color: rgba(75, 121, 228, 0.6);
+            box-shadow: 0 0 0 3px rgba(75, 121, 228, 0.12), 0 0 20px rgba(75, 121, 228, 0.15);
+        }
+
+        /* Scrollbar élégante */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(75, 121, 228, 0.3);
+            border-radius: 2px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(75, 121, 228, 0.55);
+        }
+
+        /* Bulle message */
+        .bubble-enter {
+            animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Badge pulsant */
+        .presence-ring {
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            background: #22c55e;
+            animation: ringPulse 2.2s ease-in-out infinite;
+            opacity: 0;
+        }
+
+        @keyframes ringPulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
+
+            100% {
+                transform: scale(2.2);
+                opacity: 0;
+            }
+        }
+
+        /* Gradient texte */
+        .text-gradient {
+            background: linear-gradient(135deg, #6B9BF7 0%, #A8C4FF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Séparateur de date */
+        .date-sep::before,
+        .date-sep::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+        }
+
+        /* Bouton envoyer */
+        .btn-send {
+            background: linear-gradient(135deg, #3B5FBD 0%, #4B79E4 100%);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 0 0 0 rgba(75, 121, 228, 0);
+        }
+
+        .btn-send:hover {
+            transform: translateY(-1px) scale(1.03);
+            box-shadow: 0 4px 20px rgba(75, 121, 228, 0.45);
+        }
+
+        .btn-send:active {
+            transform: scale(0.97);
+        }
+
+        /* Notification bandeau */
+        #notification-banner {
+            display: none;
+            animation: none;
+        }
+
+        #notification-banner.show {
+            display: flex;
+            animation: bannerIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        #notification-banner.hide {
+            animation: bannerOut 0.4s ease forwards;
+        }
+
+        /* Typing indicator */
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #6B9BF7;
+            animation: typingBounce 1.2s ease-in-out infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.18s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.36s;
+        }
+
+        @keyframes typingBounce {
+
+            0%,
+            80%,
+            100% {
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+
+            40% {
+                transform: translateY(-6px);
+                opacity: 1;
+            }
+        }
+
+        /* Sidebar user item */
+        .user-item {
+            transition: background 0.18s, transform 0.18s;
+        }
+
+        .user-item:hover {
+            background: rgba(75, 121, 228, 0.12);
+            transform: translateX(3px);
+        }
+
+        /* Status indicator */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+        }
+
+        .status-dot.animate-pulse-dot {
+            animation: pulseDot 2s ease-in-out infinite;
+        }
+
+        .avatar-gradient {
+            background: linear-gradient(135deg, var(--avatar-color, #3B5FBD), #243563);
+        }
+    </style>
+</head>
+
+<body class="flex h-screen overflow-hidden">
+
+    <!-- ═══════════════════════════════════════════
+       FOND ANIMÉ
+  ═══════════════════════════════════════════ -->
+    <div id="starfield" aria-hidden="true"></div>
+
+    <!-- ═══════════════════════════════════════════
+       NOTIFICATION BANDEAU (rejoint le salon)
+  ═══════════════════════════════════════════ -->
+    <div id="notification-banner"
+        class="fixed top-4 left-1/2 -translate-x-1/2 z-50 items-center gap-2 px-5 py-2.5 rounded-full glass-light shadow-glass text-sm text-frost border border-cobalt/20">
+        <svg class="w-4 h-4 text-cobalt" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4m0 4h.01" />
+        </svg>
+        <span id="notification-text">Quelqu'un a rejoint le salon</span>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+       LAYOUT PRINCIPAL
+  ═══════════════════════════════════════════ -->
+    <div class="relative z-10 flex w-full h-full p-3 gap-3">
+
+        <!-- ─────────────────────────────────────────
+         SIDEBAR GAUCHE
+    ───────────────────────────────────────── -->
+        <aside class="glass shadow-glass rounded-2xl flex flex-col w-64 min-w-[220px] overflow-hidden shrink-0">
+
+            <!-- En-tête sidebar -->
+            <div class="p-5 border-b border-white/5">
+                <div class="flex items-center gap-2 mb-1">
+                    <!-- Logo icone -->
+                    <div
+                        class="w-7 h-7 rounded-lg bg-cobalt/20 border border-cobalt/30 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-cobalt" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                    </div>
+                    <span class="font-display font-bold text-base text-gradient tracking-tight">ChatPro</span>
+                </div>
+                <p class="text-xs text-frost/40 font-body ml-9">Global · Live</p>
+            </div>
+
+            <!-- Badges système -->
+            <div class="px-4 py-3 flex gap-2 border-b border-white/5">
+                <div
+                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-body">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-dot inline-block"></span>
+                    ReplicaSet Online
+                </div>
+                <div
+                    class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cobalt/10 border border-cobalt/20 text-ice text-xs font-body">
+                    <span class="w-1.5 h-1.5 rounded-full bg-cobalt animate-pulse-dot inline-block"
+                        style="animation-delay:0.4s"></span>
+                    Redis
+                </div>
+            </div>
+
+            <!-- Section utilisateurs connectés -->
+            <div class="px-4 pt-4 pb-2">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-display font-semibold text-frost/50 uppercase tracking-widest">
+                        Connectés
+                    </span>
+                    <span id="user-count-badge"
+                        class="text-xs font-body font-medium px-2 py-0.5 rounded-full bg-cobalt/15 text-ice border border-cobalt/20">
+                        0
+                    </span>
+                </div>
+
+                <!-- Liste dynamique des utilisateurs (Socket.IO → status_update) -->
+                <ul id="user-list" class="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-280px)]">
+                    <!-- Les items sont injectés par JavaScript -->
+                </ul>
+            </div>
+
+            <!-- Pied de sidebar — nom d'utilisateur courant -->
+            <div class="mt-auto p-4 border-t border-white/5">
+                <div class="glass-light rounded-xl p-3 flex items-center gap-3">
+                    <div class="relative shrink-0">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-cobalt to-azure flex items-center justify-center text-white font-display font-bold text-sm"
+                            id="my-avatar-letter">?</div>
+                        <div class="absolute -bottom-0.5 -right-0.5 status-dot animate-pulse-dot border-2 border-deep">
+                        </div>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-sm font-display font-semibold text-frost truncate" id="my-username-display">—</p>
+                        <p class="text-xs text-frost/40 font-body">En ligne</p>
+                    </div>
+                    <svg class="w-4 h-4 text-frost/20 ml-auto shrink-0" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <circle cx="12" cy="12" r="1" />
+                        <circle cx="19" cy="12" r="1" />
+                        <circle cx="5" cy="12" r="1" />
+                    </svg>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ─────────────────────────────────────────
+         ZONE PRINCIPALE
+    ───────────────────────────────────────── -->
+        <main class="flex-1 flex flex-col glass shadow-glass rounded-2xl overflow-hidden min-w-0">
+
+            <!-- En-tête channel -->
+            <header class="px-6 py-4 border-b border-white/5 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded-xl bg-cobalt/15 border border-cobalt/25 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-cobalt" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-display font-bold text-base text-frost leading-none">général</h1>
+                        <p class="text-xs text-frost/40 font-body mt-0.5">Salon public · Messages en temps réel</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="flex -space-x-2" id="avatar-stack" aria-hidden="true">
+                        <!-- Avatars superposés générés dynamiquement -->
+                    </div>
+                    <div class="h-5 w-px bg-white/10 mx-1"></div>
+                    <div class="flex items-center gap-1.5 text-xs font-body text-frost/50">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
+                        <span id="header-user-count">0 en ligne</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Zone messages -->
+            <div id="messages-container" class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-1 scroll-smooth">
+
+                <!-- Séparateur de session -->
+                <div class="date-sep flex items-center gap-3 my-4">
+                    <span class="text-xs font-body text-frost/30 px-3">Aujourd'hui · Session Live</span>
+                </div>
+
+                <!-- ═══ HISTORIQUE JINJA2 ═══
+             Flask injecte l'historique MongoDB au chargement de la page.
+             Chaque document : {'sender': str, 'receiver': str, 'content': str, 'timestamp': datetime}
+             La variable 'current_user' doit être passée dans le contexte Flask (ex: render_template('chat_pro.html', history=history, current_user=username))
+        -->
+                {% for msg in history %}
+                {% if msg.sender == current_user %}
+                <!-- Message ENVOYÉ (aligné à droite) -->
+                <div class="flex justify-end mb-1 animate-fade-in">
+                    <div class="flex items-end gap-2 max-w-[72%]">
+                        <div class="flex flex-col items-end gap-1">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span class="text-xs font-body text-frost/35">
+                                    {{ msg.timestamp.strftime('%H:%M') if msg.timestamp else '' }}
+                                </span>
+                                <span class="text-xs font-display font-semibold text-ice/70">Vous</span>
+                            </div>
+                            <div class="px-4 py-2.5 rounded-2xl rounded-br-sm shadow-bubble"
+                                style="background: linear-gradient(135deg, #3B5FBD 0%, #4B79E4 100%);">
+                                <p class="text-sm font-body text-white leading-relaxed">{{ msg.content }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Message REÇU (aligné à gauche) -->
+                <div class="flex justify-start mb-1 animate-fade-in">
+                    <div class="flex items-end gap-2 max-w-[72%]">
+                        <!-- Avatar -->
+                        {% set avatar_style = 'style="--avatar-color: ' ~ (msg.sender | colorfor) ~ ';"' %}
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-display font-bold shrink-0 mb-0.5 avatar-gradient"
+                            {{ avatar_style | safe }}>
+                            {{ msg.sender[0].upper() if msg.sender else '?' }}
+                        </div>
+                        <div class="flex flex-col items-start gap-1">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span class="text-xs font-display font-semibold text-frost/70">{{ msg.sender }}</span>
+                                <span class="text-xs font-body text-frost/35">
+                                    {{ msg.timestamp.strftime('%H:%M') if msg.timestamp else '' }}
+                                </span>
+                            </div>
+                            <div class="px-4 py-2.5 rounded-2xl rounded-bl-sm glass-light shadow-bubble">
+                                <p class="text-sm font-body text-frost/90 leading-relaxed">{{ msg.content }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+                <!-- ═══ FIN HISTORIQUE ═══ -->
+
+                <!-- Ancre de scroll automatique -->
+                <div id="scroll-anchor"></div>
+            </div>
+
+            <!-- Zone de saisie -->
+            <div class="px-6 py-4 border-t border-white/5 shrink-0">
+                <!-- Indicateur de frappe (masqué par défaut) -->
+                <div id="typing-indicator" class="flex items-center gap-2 mb-2.5 px-1 hidden">
+                    <div class="flex gap-1 items-center">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                    <span class="text-xs font-body text-frost/40" id="typing-text">quelqu'un est en train
+                        d'écrire…</span>
+                </div>
+
+                <div class="flex items-end gap-3">
+                    <!-- Champ de saisie -->
+                    <div class="flex-1 relative">
+                        <textarea id="message-input" rows="1" placeholder="Envoyer un message…"
+                            class="glass-input w-full rounded-xl px-4 py-3 text-sm font-body text-frost placeholder-frost/25 resize-none overflow-hidden leading-relaxed transition-all duration-200"
+                            style="min-height:46px; max-height:140px;"></textarea>
+                        <!-- Raccourci clavier hint -->
+                        <span
+                            class="absolute right-3 bottom-3 text-[10px] font-body text-frost/20 select-none hidden sm:block">
+                            ↵ Envoyer
+                        </span>
+                    </div>
+
+                    <!-- Bouton envoyer -->
+                    <button id="send-btn"
+                        class="btn-send rounded-xl px-4 h-[46px] flex items-center gap-2 text-white font-display font-semibold text-sm shrink-0">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        <span class="hidden sm:inline">Envoyer</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+       MODAL DE CONNEXION (affiché au démarrage
+       si aucun pseudo n'est défini côté Flask)
+  ═══════════════════════════════════════════ -->
+    <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style="background: rgba(5,10,24,0.85); backdrop-filter: blur(8px);">
+        <div class="glass shadow-glass rounded-2xl p-8 w-full max-w-sm animate-fade-in">
+            <!-- Logo -->
+            <div class="flex justify-center mb-6">
+                <div
+                    class="w-14 h-14 rounded-2xl bg-cobalt/20 border border-cobalt/30 flex items-center justify-center shadow-glow">
+                    <svg class="w-7 h-7 text-cobalt" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                </div>
+            </div>
+            <h2 class="font-display font-bold text-xl text-center text-frost mb-1">Rejoindre ChatPro</h2>
+            <p class="text-sm font-body text-frost/40 text-center mb-6">Choisissez votre pseudonyme pour continuer</p>
+            <input id="username-input" type="text" placeholder="Votre pseudonyme…" maxlength="24"
+                class="glass-input w-full rounded-xl px-4 py-3 text-sm font-body text-frost placeholder-frost/25 mb-4" />
+            <button id="join-btn" class="btn-send w-full rounded-xl py-3 text-white font-display font-semibold text-sm">
+                Rejoindre le salon →
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+       JAVASCRIPT — LOGIQUE SOCKET.IO & UI
+  ═══════════════════════════════════════════ -->
+    <script>
+        // ────────────────────────────────────────────
+        // UTILITAIRES
+        // ────────────────────────────────────────────
+
+        /** Génère une couleur HSL déterministe depuis une chaîne. */
+        function colorFromString(str) {
+            let h = 0;
+            for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xFFFFFF;
+            return `hsl(${(h % 60) + 190}, 55%, 48%)`;  // plage de bleus/violets
+        }
+
+        /** Affiche le bandeau de notification puis le masque après delay ms. */
+        function showNotification(text, delay = 3500) {
+            const banner = document.getElementById('notification-banner');
+            const label = document.getElementById('notification-text');
+            label.textContent = text;
+            banner.classList.remove('hide');
+            banner.classList.add('show');
+            clearTimeout(banner._timeout);
+            banner._timeout = setTimeout(() => {
+                banner.classList.replace('show', 'hide');
+                banner.addEventListener('animationend', () => banner.classList.remove('hide'), { once: true });
+            }, delay);
+        }
+
+        /** Fait défiler la zone de messages jusqu'en bas. */
+        function scrollToBottom(smooth = true) {
+            const anchor = document.getElementById('scroll-anchor');
+            anchor?.scrollIntoView({ behavior: smooth ? 'smooth' : 'instant' });
+        }
+
+        /** Auto-resize du textarea. */
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+        }
+
+        // ────────────────────────────────────────────
+        // STATE
+        // ────────────────────────────────────────────
+        let currentUser = "{{ current_user if current_user else '' }}";
+
+        /*
+          Si Flask passe déjà un nom d'utilisateur via Jinja2, on peut le
+          pré-remplir ici pour éviter l'affichage du modal.
+          Exemple dans web_chat_pro.py :
+            render_template('chat_pro.html', history=history,
+                            current_user=session.get('username', ''))
+    
+          Décommentez et adaptez la ligne suivante si vous gérez les sessions Flask :
+        */
+        // currentUser = "{{ current_user | default('') }}";
+
+        // ────────────────────────────────────────────
+        // SOCKET.IO — INITIALISATION
+        // ────────────────────────────────────────────
+        const socket = io({ autoConnect: false });  // connexion différée après login
+
+        // ── Événement : connexion établie
+        socket.on('connect', () => {
+            console.log('[Socket.IO] Connecté :', socket.id);
+            // On annonce notre présence au serveur Flask-SocketIO
+            socket.emit('connect_user', { username: currentUser });
+        });
+
+        // ── Événement : déconnexion
+        socket.on('disconnect', () => {
+            console.warn('[Socket.IO] Déconnecté');
+        });
+
+        // ────────────────────────────────────────────
+        // SOCKET.IO — RÉCEPTION DES ÉVÉNEMENTS SERVEUR
+        // ────────────────────────────────────────────
+
+        /**
+         * status_update : Le serveur envoie la liste complète des pseudos connectés
+         * (issue de Redis). Format attendu : { users: ['alice', 'bob', ...] }
+         * OU directement un tableau ['alice', 'bob', ...]
+         */
+        socket.on('status_update', (data) => {
+            const users = Array.isArray(data) ? data : (data.users || []);
+            updateUserList(users);
+        });
+
+        /**
+         * new_msg : Le serveur broadcast un nouveau message.
+         * Format attendu : { username: str, message: str, time: str }
+         */
+        socket.on('new_msg', (data) => {
+            appendMessage({
+                sender: data.username,
+                content: data.message,
+                time: data.time || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+                isOwn: data.username === currentUser,
+            });
+            scrollToBottom();
+        });
+
+        /**
+         * user_joined : Bandeau de notification (optionnel, si le serveur émet cet event).
+         * Format attendu : { username: str }
+         */
+        socket.on('user_joined', (data) => {
+            if (data.username && data.username !== currentUser) {
+                showNotification(`✦ ${data.username} a rejoint le salon`);
+            }
+        });
+
+        // ────────────────────────────────────────────
+        // MISE À JOUR DE LA SIDEBAR — LISTE UTILISATEURS
+        // ────────────────────────────────────────────
+
+        /** Reconstruit la liste des utilisateurs connectés dans la sidebar. */
+        function updateUserList(users) {
+            const list = document.getElementById('user-list');
+            const count = document.getElementById('user-count-badge');
+            const hCount = document.getElementById('header-user-count');
+            const stack = document.getElementById('avatar-stack');
+
+            // Badge compteur
+            count.textContent = users.length;
+            hCount.textContent = `${users.length} en ligne`;
+
+            // Liste sidebar
+            list.innerHTML = '';
+            users.forEach((pseudo, i) => {
+                const isSelf = pseudo === currentUser;
+                const color = colorFromString(pseudo);
+                const letter = pseudo[0]?.toUpperCase() || '?';
+
+                const li = document.createElement('li');
+                li.className = 'user-item flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-default';
+                li.innerHTML = `
+          <div class="relative shrink-0">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-display font-bold"
+                 style="background: linear-gradient(135deg, ${color}, #1A2A52);">
+              ${letter}
+            </div>
+            <!-- Anneau pulsant de présence -->
+            <div class="presence-ring" style="animation-delay:${i * 0.3}s"></div>
+            <!-- Dot vert -->
+            <div class="absolute -bottom-0.5 -right-0.5 status-dot border-2 border-deep"
+                 style="animation-delay:${i * 0.4}s"></div>
+          </div>
+          <div class="min-w-0">
+            <p class="text-sm font-body ${isSelf ? 'text-ice font-medium' : 'text-frost/80'} truncate">
+              ${pseudo}${isSelf ? ' <span class="text-frost/40 text-xs font-normal">(vous)</span>' : ''}
+            </p>
+            <p class="text-[10px] font-body text-emerald-400/70">En ligne</p>
+          </div>
+        `;
+                list.appendChild(li);
+            });
+
+            // Stack d'avatars dans le header (max 4)
+            stack.innerHTML = '';
+            users.slice(0, 4).forEach((pseudo, i) => {
+                const color = colorFromString(pseudo);
+                const letter = pseudo[0]?.toUpperCase() || '?';
+                const div = document.createElement('div');
+                div.className = 'w-6 h-6 rounded-full border-2 border-deep flex items-center justify-center text-white text-[9px] font-display font-bold';
+                div.style.background = `linear-gradient(135deg, ${color}, #1A2A52)`;
+                div.style.zIndex = 10 - i;
+                div.textContent = letter;
+                stack.appendChild(div);
+            });
+            if (users.length > 4) {
+                const more = document.createElement('div');
+                more.className = 'w-6 h-6 rounded-full border-2 border-deep bg-slate flex items-center justify-center text-frost/50 text-[9px] font-body';
+                more.style.zIndex = 6;
+                more.textContent = `+${users.length - 4}`;
+                stack.appendChild(more);
+            }
+        }
+
+        // ────────────────────────────────────────────
+        // RENDU D'UN MESSAGE
+        // ────────────────────────────────────────────
+
+        /**
+         * Crée et insère une bulle de message dans la zone de discussion.
+         * @param {Object} opts
+         * @param {string} opts.sender  — Pseudo de l'expéditeur
+         * @param {string} opts.content — Contenu du message
+         * @param {string} opts.time    — Heure formatée (ex: "14:32")
+         * @param {boolean} opts.isOwn  — true si c'est notre propre message
+         */
+        function appendMessage({ sender, content, time, isOwn }) {
+            const container = document.getElementById('messages-container');
+            const anchor = document.getElementById('scroll-anchor');
+            const color = colorFromString(sender);
+            const letter = sender[0]?.toUpperCase() || '?';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex mb-1 bubble-enter ${isOwn ? 'justify-end' : 'justify-start'}`;
+
+            if (isOwn) {
+                // ── Message envoyé (droite, gradient bleu)
+                wrapper.innerHTML = `
+          <div class="flex items-end gap-2 max-w-[72%]">
+            <div class="flex flex-col items-end gap-1">
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class="text-xs font-body text-frost/35">${time}</span>
+                <span class="text-xs font-display font-semibold text-ice/70">Vous</span>
+              </div>
+              <div class="px-4 py-2.5 rounded-2xl rounded-br-sm shadow-bubble"
+                   style="background: linear-gradient(135deg, #3B5FBD 0%, #4B79E4 100%);">
+                <p class="text-sm font-body text-white leading-relaxed">${escapeHtml(content)}</p>
+              </div>
+            </div>
+          </div>
+        `;
+            } else {
+                // ── Message reçu (gauche, verre)
+                wrapper.innerHTML = `
+          <div class="flex items-end gap-2 max-w-[72%]">
+            <div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-display font-bold shrink-0 mb-0.5"
+                 style="background: linear-gradient(135deg, ${color}, #1A2A52);">
+              ${letter}
+            </div>
+            <div class="flex flex-col items-start gap-1">
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class="text-xs font-display font-semibold text-frost/70">${escapeHtml(sender)}</span>
+                <span class="text-xs font-body text-frost/35">${time}</span>
+              </div>
+              <div class="px-4 py-2.5 rounded-2xl rounded-bl-sm glass-light shadow-bubble">
+                <p class="text-sm font-body text-frost/90 leading-relaxed">${escapeHtml(content)}</p>
+              </div>
+            </div>
+          </div>
+        `;
+            }
+
+            container.insertBefore(wrapper, anchor);
+        }
+
+        /** Échappe les caractères HTML pour éviter les injections XSS. */
+        function escapeHtml(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ────────────────────────────────────────────
+        // ENVOI D'UN MESSAGE
+        // ────────────────────────────────────────────
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+            if (!content || !currentUser) return;
+
+            // Émet l'événement Socket.IO vers le serveur Flask
+            socket.emit('send_message', {
+                username: currentUser,
+                message: content,
+            });
+
+            // Réinitialise le champ
+            input.value = '';
+            autoResize(input);
+            input.focus();
+        }
+
+        // ────────────────────────────────────────────
+        // GESTION DU MODAL DE CONNEXION
+        // ────────────────────────────────────────────
+
+        function joinChat(pseudo) {
+            pseudo = pseudo.trim();
+            if (!pseudo) return;
+
+            currentUser = pseudo;
+
+            // Mise à jour de l'interface locale
+            document.getElementById('my-username-display').textContent = pseudo;
+            document.getElementById('my-avatar-letter').textContent = pseudo[0].toUpperCase();
+
+            // Ferme le modal
+            const modal = document.getElementById('login-modal');
+            modal.style.opacity = '0';
+            modal.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => modal.remove(), 300);
+
+            // Connecte Socket.IO (déclenche l'event 'connect' → 'connect_user')
+            socket.connect();
+
+            // Focus sur le champ de saisie
+            setTimeout(() => {
+                document.getElementById('message-input')?.focus();
+                scrollToBottom(false);
+            }, 400);
+        }
+
+        // ────────────────────────────────────────────
+        // LISTENERS UI
+        // ────────────────────────────────────────────
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // Scroll initial vers le bas (historique Jinja2)
+            scrollToBottom(false);
+
+            // Auto-resize du textarea
+            const textarea = document.getElementById('message-input');
+            textarea.addEventListener('input', () => autoResize(textarea));
+
+            // Envoi par touche Entrée (Shift+Entrée = saut de ligne)
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Bouton Envoyer
+            document.getElementById('send-btn').addEventListener('click', sendMessage);
+
+            // Modal — bouton Rejoindre
+            document.getElementById('join-btn').addEventListener('click', () => {
+                joinChat(document.getElementById('username-input').value);
+            });
+
+            // Modal — touche Entrée dans le champ pseudo
+            document.getElementById('username-input').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') joinChat(e.target.value);
+            });
+
+            // ── Si Flask a déjà fourni un pseudo (sessions), on se connecte directement.
+            if (currentUser) {
+                joinChat(currentUser);
+            }
+        });
+    </script>
+</body>
+
+</html>
