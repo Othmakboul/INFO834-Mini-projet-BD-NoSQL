@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Tchat NoSQL - Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+
+<body class="bg-light">
+    <div class="container mt-4">
+        <h1 class="mb-4">Dashboard Tchat (Mongo + Redis)</h1>
+
+        <div class="row">
+            <!-- Colonne de GAUCHE : Redis -->
+            <div class="col-md-4">
+                <div class="card shadow">
+                    <div class="card-header bg-danger text-white">Utilisateurs en ligne (REDIS)</div>
+                    <ul class="list-group list-group-flush">
+                        {% for user in users %}
+                        <li class="list-group-item">🟢 {{ user }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Colonne de DROITE : MongoDB -->
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">Historique des messages (MONGODB)</div>
+                    <div class="card-body" style="height: 400px; overflow-y: auto;">
+                        {% for msg in messages %}
+                        <div class="mb-2">
+                            <strong>{{ msg.sender }}</strong>: {{ msg.content }}
+                            <small class="text-muted">({{ msg.timestamp.strftime('%H:%M') }})</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
