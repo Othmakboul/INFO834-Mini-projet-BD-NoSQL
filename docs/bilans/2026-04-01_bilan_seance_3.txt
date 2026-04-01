@@ -1,0 +1,29 @@
+Bilan de séance - Projet Tchat INFO834
+Date : 1 Avril 2026
+
+MEMBRES PRÉSENTS :
+
+makboul othmane
+zakaria rahou
+amine abidi
+MEMBRES ABSENTS :
+
+ÉTAT D'AVANCEMENT / OBJECTIFS :
+Le débogage post-fusion est terminé. Le serveur WebSocket communique de manière parfaitement stable avec l'infrastructure
+Docker (Redis et MongoDB). Les scripts d'analyse de données (pipelines d'agrégation) ont été testés avec succès en conditions réelles.
+L'architecture distribuée est pleinement opérationnelle.
+
+TRAVAIL FAIT LORS DE CETTE SÉANCE :
+
+Séance 3 : Débogage final et validation de l'analyse NoSQL.
+
+Correction et stabilisation du serveur (server.py) suite aux conflits de fusion Git :
+restauration des imports et réintégration de la logique de persistance 
+(statuts en ligne sur Redis et sauvegarde des messages sur MongoDB).
+
+Débogage de l'infrastructure Docker : identification et résolution d'une erreur de syntaxe dans le fichier
+docker-compose.yml, puis redémarrage à chaud du cluster (ReplicaSet MongoDB et Redis)pour résoudre les rejets de connexion .
+
+Validation de la partie analytique : exécution réussie du script d'Amine en local.
+Les pipelines d'agrégation MongoDB interrogent correctement la base pour afficher l'historique horodaté
+et le classement (top envoyeurs) du tchat public.

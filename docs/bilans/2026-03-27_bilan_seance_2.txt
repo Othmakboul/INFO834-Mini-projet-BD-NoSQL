@@ -1,0 +1,26 @@
+Bilan de séance - Projet Tchat INFO834
+Date : 27 Mars 2026
+
+MEMBRES PRÉSENTS :
+
+makboul othmane
+zakaria rahou
+
+MEMBRES ABSENTS :
+
+amine abidi
+
+ÉTAT D'AVANCEMENT / OBJECTIFS :
+Très fort. L'intégration complète entre le moteur de communication en temps réel (WebSockets) et le système de persistance (MongoDB, Redis) est terminée et 100% fonctionnelle.
+
+TRAVAIL FAIT DEPUIS LA SÉANCE PRÉCÉDENTE :
+
+Séance 2 : Mise en place des WebSockets et intégration BDD.
+
+Développement de l'architecture WebSockets (Othmane) : Création du client (client.py) et du serveur multithreadé (server.py) gérant la diffusion (broadcast) des messages.
+
+Gestion des requêtes de base de données (Zakaria) : Création de la classe MongoManager (mongodb_manager.py) avec les fonctions de sauvegarde et de récupération de l'historique.
+
+Débogage et réseau (Othmane) : Contournement du problème de résolution DNS de PyMongo avec les conteneurs Docker sous Windows via la modification de la chaîne de connexion locale.
+
+Fusion et Intégration finale (Othmane) : Rapatriement du code de Zakaria via Pull Request. Connexion du serveur aux bases : le serveur enregistre désormais automatiquement les présences (connexions/déconnexions) dans Redis et sauvegarde chaque message en temps réel dans MongoDB.
