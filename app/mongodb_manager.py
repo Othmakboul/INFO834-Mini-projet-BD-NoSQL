@@ -27,11 +27,22 @@ class MongoManager:
         for s in stats:
             print(f"Utilisateur: {s['_id']} | Messages: {s['count']}")
 
+    def save_message(self, sender, receiver, content):
+        """Enregistre un nouveau message dans MongoDB."""
+        message_doc = {
+            "sender": sender,
+            "receiver": receiver,
+            "content": content,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc)
+        }
+        self.collection.insert_one(message_doc)
+
+
 if __name__ == "__main__":
     manager = MongoManager()
-    
+
     # On affiche TOUT ce qui a été capturé par le serveur
     manager.get_all_messages()
-    
+
     # On affiche les stats
     manager.get_user_stats()
