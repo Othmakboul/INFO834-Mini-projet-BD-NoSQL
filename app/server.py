@@ -11,6 +11,30 @@ mongo = MongoManager()
 redis_c = get_redis_client()
 clients_connectes = {}
 
+# --- REDIS PUB/SUB ---
+def ecouter_redis():
+    """Écoute les messages venant de Redis (ex: envoyés par la Web App) et les diffuse aux clients TCP."""
+    pubsub = redis_c.pubsub()
+    pubsub.subscribe('chat_room:Général')
+    print("[*] Serveur TCP écoute sur le canal Redis 'chat_room:Général'")
+    
+    for message in pubsub.listen():
+        if message['type'] == 'message':
+            data = message['data']
+            # On ne traite que les messages venant du Web
+            if data.startswith('[WEB]'):
+                # Format: [WEB] [ROOM] Pseudo: Message
+                msg_body = data.replace('[WEB] ', '')
+                if msg_body.startswith('['):
+                    # Message avec salon
+                    diffuser_message(msg_body)
+                else:
+                    # Message sans salon spécifié (ancien format ou fallback)
+                    diffuser_message(msg_body)
+
+# Lancement de l'écoute Redis dans un thread séparé
+threading.Thread(target=ecouter_redis, daemon=True).start()
+
 def diffuser_message(message_str, client_expediteur=None):
     """Envoie un message à tout le monde."""
     for client in clients_connectes:
@@ -41,10 +65,14 @@ def gerer_client(client_socket, adresse):
             # On stocke CHAQUE message dans MongoDB
             mongo.save_message(sender=pseudo, receiver="GLOBAL", content=message_brut)
 
-            # Affichage et diffusion
+            # Affichage et diffusion locale (TCP)
             message_formate = f"{pseudo}: {message_brut}"
             print(message_formate) 
             diffuser_message(message_formate, client_socket)
+
+            # --- PARTIE REDIS PUB/SUB ---
+            # On publie le message avec un préfixe [TCP] pour que la Web App sache d'où ça vient
+            redis_c.publish('chat_room:Général', f"[TCP] {message_formate}")
                 
     except Exception as e:
         print(f"Erreur avec {adresse}: {e}")

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChatPro V2 — Pro Messaging</title>
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.net"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <!-- Socket.IO -->
@@ -109,71 +109,70 @@
 
     <div class="relative z-10 flex w-full h-full p-3 gap-3">
         <!-- SIDEBAR -->
-        <aside class="glass shadow-glass rounded-2xl flex flex-col w-72 min-w-[240px] overflow-hidden shrink-0">
+        <aside class="glass shadow-glass rounded-2xl flex flex-col w-[320px] min-w-[320px] overflow-hidden shrink-0">
             <!-- Header -->
-            <div class="p-6 border-b border-white/5">
-                <div class="flex items-center gap-2 mb-1">
-                    <div class="w-8 h-8 rounded-xl bg-cobalt ring-4 ring-cobalt/10 flex items-center justify-center shadow-glow">
+            <div class="p-5 border-b border-white/5 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-cobalt ring-2 ring-cobalt/20 flex items-center justify-center shadow-glow">
                         <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                         </svg>
                     </div>
-                    <span class="font-display font-bold text-lg text-frost tracking-tight">ChatPro <span class="text-cobalt">V2</span></span>
+                    <span class="font-display font-bold text-lg text-frost tracking-tight">Discussions</span>
+                </div>
+                <!-- Actions -->
+                <div class="flex gap-1.5">
+                    <button onclick="document.getElementById('add-contact-modal').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-frost transition-colors" title="Ajouter un contact">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                    </button>
+                    <button onclick="document.getElementById('create-group-modal').classList.remove('hidden')" class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-frost transition-colors" title="Nouveau groupe">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    </button>
                 </div>
             </div>
 
-            <!-- SALONS -->
-            <div class="px-4 py-6 overflow-y-auto flex-none">
-                <h3 class="text-[10px] font-bold text-frost/30 uppercase tracking-[0.2em] px-2 mb-4">Salons</h3>
-                <ul id="rooms-list" class="flex flex-col gap-1">
-                    {% for salon in salons %}
-                    <li onclick="switchRoom('{{ salon }}')" 
-                        class="room-item flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all hover:bg-white/5 group text-sm"
-                        id="room-{{ salon }}">
-                        <span class="text-frost/30 group-hover:text-cobalt">#</span>
-                        <span class="font-medium text-frost/60 group-hover:text-frost">{{ salon }}</span>
-                        <span class="notification-badge hidden ml-auto w-2 h-2 rounded-full bg-cobalt shadow-[0_0_10px_#4B79E4]"></span>
-                    </li>
-                    {% endfor %}
+            <!-- UNIFIED CONVERSATIONS -->
+            <div class="px-2 py-3 flex-1 overflow-y-auto">
+                <ul id="conversations-list" class="flex flex-col gap-1">
+                    <!-- Rempli par Socket.IO via l'événement conversations_data -->
                 </ul>
             </div>
 
-            <!-- MP / ONLINE -->
-            <div class="px-4 py-2 flex-1 overflow-y-auto border-t border-white/5 pt-6">
-                <div class="flex items-center justify-between px-2 mb-4">
-                    <h3 class="text-[10px] font-bold text-frost/30 uppercase tracking-[0.2em]">Messages Privés</h3>
-                    <span id="user-count-badge" class="text-[10px] font-bold bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">0</span>
-                </div>
-                <ul id="user-list" class="flex flex-col gap-1">
-                    <!-- Dynamic -->
-                </ul>
-            </div>
-
-            <!-- Profile -->
+            <!-- Profile (Bottom) -->
             <div class="p-4 bg-black/20 border-t border-white/5">
                 <div class="glass-light rounded-2xl p-3 flex items-center gap-3">
-                    <div class="relative">
-                        <div id="my-avatar-display" class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-inner">?</div>
-                        <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-deep"></div>
+                    <div class="flex items-center gap-3 flex-1 cursor-pointer hover:bg-white/5 p-1 -m-1 rounded-xl transition-colors" onclick="openMyProfile()">
+                        <div class="relative">
+                            <div id="my-avatar-display" class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-inner">?</div>
+                            <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-deep"></div>
+                        </div>
+                        <div class="min-w-0">
+                            <p id="my-username-display" class="text-sm font-bold text-frost truncate">Pseudo</p>
+                            <p class="text-[10px] text-frost/40">Profil & Actu</p>
+                        </div>
                     </div>
-                    <div class="min-w-0">
-                        <p id="my-username-display" class="text-sm font-bold text-frost truncate">Pseudo</p>
-                        <p class="text-[10px] text-frost/40">En ligne</p>
-                    </div>
+                    <button onclick="logout()" class="ml-auto w-8 h-8 flex items-center justify-center text-frost/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" title="Déconnexion">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                    </button>
                 </div>
             </div>
         </aside>
+
 
         <!-- MAIN -->
         <main class="flex-1 flex flex-col glass shadow-glass rounded-3xl overflow-hidden min-w-0">
             <!-- Header -->
             <header class="px-8 py-5 border-b border-white/5 flex items-center justify-between bg-white/5">
-                <div class="flex items-center gap-4">
+                <div id="header-user-info" class="flex items-center gap-4 cursor-pointer hover:bg-white/5 p-2 -ml-2 rounded-2xl transition-colors" onclick="openContactInfo()">
                     <div id="header-icon" class="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-xl text-cobalt font-bold">#</div>
                     <div>
                         <h1 id="current-context-name" class="font-display font-bold text-xl text-ice">Général</h1>
                         <p id="current-context-desc" class="text-xs text-frost/40">Salon public par défaut</p>
                     </div>
+                </div>
+                <!-- Action Button (Leave Group / Remove Contact) -->
+                <div>
+                    <button id="context-action-btn" class="hidden px-4 py-2 bg-white/5 hover:bg-red-500/20 text-frost hover:text-red-400 text-sm font-medium rounded-xl transition-all border border-white/5 hover:border-red-500/30">Action</button>
                 </div>
             </header>
 
@@ -219,7 +218,7 @@
                     <textarea id="message-input" rows="1" placeholder="Envoyer dans Général..."
                         class="bg-transparent w-full rounded-xl px-4 py-3 text-sm text-frost placeholder-frost/20 resize-none outline-none max-h-40 min-h-[46px]"></textarea>
                     <button id="send-btn" class="bg-cobalt hover:bg-azure h-[46px] px-6 rounded-xl flex items-center justify-center text-white transition-all active:scale-95 shadow-lg shadow-cobalt/30">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <svg class="w-5 h-5" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                     </button>
@@ -232,16 +231,115 @@
     <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-deep/95 backdrop-blur-2xl">
         <div class="glass p-10 w-full max-w-md rounded-[2.5rem] border border-white/10 shadow-2xl text-center">
             <div class="w-20 h-20 bg-cobalt rounded-3xl mx-auto mb-8 flex items-center justify-center shadow-glow ring-8 ring-cobalt/5">
-                <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <svg class="w-10 h-10 text-white" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
             </div>
             <h2 class="text-3xl font-display font-bold text-frost mb-3">Rejoindre ChatPro <span class="text-cobalt">V2</span></h2>
-            <p class="text-frost/40 text-sm mb-10">Entrez votre pseudonyme pour commencer à chatter.</p>
-            <input id="username-input" type="text" placeholder="Ninja du code..." maxlength="20"
-                class="glass-input w-full rounded-2xl px-6 py-5 text-ice mb-6 text-center text-lg font-bold placeholder-frost/10">
-            <button id="join-btn" class="w-full bg-cobalt hover:bg-azure py-5 rounded-2xl text-white font-bold text-lg shadow-xl shadow-cobalt/20 transition-all active:scale-[0.98]">C'est parti !</button>
+            <p class="text-frost/40 text-sm mb-8">Entrez vos identifiants pour chatter.</p>
+            <input id="username-input" type="text" placeholder="Pseudo..." maxlength="20"
+                class="glass-input w-full rounded-2xl px-6 py-4 text-ice mb-4 text-center text-lg font-bold placeholder-frost/10 focus:ring-2 focus:ring-cobalt/50 transition-all outline-none">
+            <input id="password-input" type="password" placeholder="Mot de passe" 
+                class="glass-input w-full rounded-2xl px-6 py-4 text-ice mb-4 text-center text-lg font-bold placeholder-frost/10 focus:ring-2 focus:ring-cobalt/50 transition-all outline-none">
+            <p id="login-error" class="text-red-400 text-sm font-bold mb-4 hidden"></p>
+            <button id="join-btn" class="w-full bg-cobalt hover:bg-azure py-5 rounded-2xl text-white font-bold text-lg shadow-xl shadow-cobalt/20 transition-all active:scale-[0.98]">Connexion / Inscription</button>
         </div>
+    </div>
+
+    <!-- ADD CONTACT MODAL -->
+    <div id="add-contact-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-deep/80 backdrop-blur-md hidden transition-opacity" onclick="if(event.target === this) this.classList.add('hidden')">
+        <div class="glass p-8 w-full max-w-sm rounded-[2rem] border border-white/10 shadow-2xl relative">
+            <h3 class="font-display font-bold text-xl text-frost mb-2">Ajouter un contact</h3>
+            <p class="text-frost/40 text-xs mb-6">Recherchez ou entrez le pseudo exact.</p>
+            <div class="relative w-full mb-4">
+                <input id="contact-input" type="text" placeholder="Pseudo du contact" oninput="searchUsers(this.value, 'contact-suggestions')" class="glass-input w-full rounded-xl px-4 py-3 text-ice text-sm outline-none">
+                <ul id="contact-suggestions" class="absolute z-10 w-full mt-1 bg-[#050A18] border border-white/10 rounded-lg shadow-2xl max-h-40 overflow-y-auto hidden"></ul>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('add-contact-modal').classList.add('hidden')" class="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-frost text-sm font-medium transition-colors">Annuler</button>
+                <button id="add-contact-btn" class="flex-1 py-3 rounded-xl bg-cobalt hover:bg-azure text-white text-sm font-bold shadow-lg shadow-cobalt/20 transition-all">Ajouter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CREATE GROUP MODAL -->
+    <div id="create-group-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-deep/80 backdrop-blur-md hidden transition-opacity" onclick="if(event.target === this) this.classList.add('hidden')">
+        <div class="glass p-8 w-full max-w-sm rounded-[2rem] border border-white/10 shadow-2xl relative">
+            <h3 class="font-display font-bold text-xl text-frost mb-2">Créer un groupe</h3>
+            <p class="text-frost/40 text-xs mb-4">Séparez les pseudos par des virgules ou recherchez-les.</p>
+            <input id="group-name-input" type="text" placeholder="Nom du groupe (ex: Dev Team)" class="glass-input w-full rounded-xl px-4 py-3 text-ice mb-3 text-sm outline-none">
+            
+            <div class="relative w-full mb-6">
+                <input id="group-members-input" type="text" placeholder="Membres (ex: alice, bob)" oninput="searchUsers(this.value, 'group-suggestions')" class="glass-input w-full rounded-xl px-4 py-3 text-ice text-sm outline-none">
+                <ul id="group-suggestions" class="absolute z-10 w-full mt-1 bg-[#050A18] border border-white/10 rounded-lg shadow-2xl max-h-40 overflow-y-auto hidden"></ul>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('create-group-modal').classList.add('hidden')" class="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-frost text-sm font-medium transition-colors">Annuler</button>
+                <button id="create-group-btn" class="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all">Créer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT PROFILE MODAL -->
+    <div id="edit-profile-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-deep/80 backdrop-blur-md hidden transition-opacity" onclick="if(event.target === this) this.classList.add('hidden')">
+        <div class="glass p-8 w-full max-w-sm rounded-[2rem] border border-white/10 shadow-2xl relative text-center">
+            <h3 class="font-display font-bold text-xl text-frost mb-4">Mon Profil</h3>
+            <div class="w-20 h-20 rounded-2xl mx-auto mb-4 flex items-center justify-center text-3xl font-bold tracking-wider text-white bg-cobalt shadow-glow shadow-cobalt/20" id="edit-profile-avatar">?</div>
+            <p class="text-frost/40 text-xs mb-2">Votre Actu (Statut)</p>
+            <input id="my-bio-input" type="text" placeholder="Salut ! J'utilise ChatPro." class="glass-input w-full rounded-xl px-4 py-3 text-ice text-sm outline-none mb-6 text-center" maxlength="60">
+            <div class="flex gap-3">
+                <button onclick="document.getElementById('edit-profile-modal').classList.add('hidden')" class="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-frost text-sm font-medium transition-colors">Fermer</button>
+                <button id="save-profile-btn" class="flex-1 py-3 rounded-xl bg-cobalt hover:bg-azure text-white text-sm font-bold shadow-lg shadow-cobalt/20 transition-all">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTACT INFO MODAL -->
+    <div id="contact-info-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-deep/80 backdrop-blur-md hidden transition-opacity" onclick="if(event.target === this) this.classList.add('hidden')">
+        <div class="glass p-8 w-full max-w-sm rounded-[2rem] border border-white/10 shadow-2xl relative text-center">
+            <h3 class="font-display font-bold text-xl text-frost mb-6">Infos Contact</h3>
+            <div class="w-24 h-24 rounded-3xl mx-auto mb-4 flex items-center justify-center text-4xl font-bold text-white shadow-xl shadow-black/20" id="contact-info-avatar" style="background: var(--azure);">?</div>
+            <h4 class="font-bold text-2xl text-ice mb-1" id="contact-info-username">Pseudo</h4>
+            <span class="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-bold rounded-full mb-6">Connecté</span>
+            
+            <div class="bg-black/20 p-4 rounded-2xl text-left border border-white/5">
+                <p class="text-[10px] text-frost/40 uppercase tracking-widest font-bold mb-1">Actu</p>
+                <p class="text-frost text-sm italic" id="contact-info-bio">Chargement...</p>
+            </div>
+            <button onclick="document.getElementById('contact-info-modal').classList.add('hidden')" class="w-full mt-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-frost text-sm font-medium transition-colors">Fermer</button>
+        </div>
+    </div>
+
+    <!-- GROUP INFO MODAL -->
+    <div id="group-info-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-deep/80 backdrop-blur-md hidden transition-opacity" onclick="if(event.target === this) this.classList.add('hidden')">
+        <div class="glass p-8 w-full max-w-sm rounded-[2rem] border border-white/10 shadow-2xl relative text-center flex flex-col max-h-[90vh]">
+            <h3 class="font-display font-bold text-2xl text-frost mb-1" id="group-info-name">Groupe</h3>
+            <p class="text-xs text-frost/40 mb-6">Créé par <span class="font-bold text-cobalt" id="group-info-creator">?</span></p>
+
+            <!-- Admin Section -->
+            <div id="group-admin-tools" class="hidden mb-4 p-4 bg-white/5 rounded-2xl border border-white/5 text-left">
+                <p class="text-[10px] text-frost/40 uppercase tracking-widest font-bold mb-3">Outils Admin</p>
+                <div class="relative w-full mb-2">
+                    <input id="group-add-member-input" type="text" placeholder="Ajouter un membre..." class="glass-input w-full rounded-xl px-4 py-2 text-ice text-sm outline-none">
+                </div>
+                <button onclick="addGroupMember()" class="w-full py-2 rounded-xl bg-cobalt hover:bg-azure text-white text-xs font-bold transition-all">Ajouter au groupe</button>
+            </div>
+
+            <!-- Members List -->
+            <div class="flex-1 overflow-y-auto w-full text-left bg-black/20 rounded-2xl p-4 border border-white/5 mt-2">
+                <p class="text-[10px] text-frost/40 uppercase tracking-widest font-bold mb-3">Membres (<span id="group-info-count">0</span>)</p>
+                <div id="group-members-list" class="flex flex-col gap-2">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+
+            <button onclick="document.getElementById('group-info-modal').classList.add('hidden')" class="w-full mt-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-frost text-sm font-medium transition-colors shrink-0">Fermer</button>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="toast" class="fixed bottom-6 right-6 z-50 glass px-6 py-4 rounded-xl border border-white/10 shadow-2xl text-sm font-medium text-white transform translate-y-20 opacity-0 transition-all duration-300">
+        Notification
     </div>
 
     <script>
@@ -259,13 +357,29 @@
             if (activeContext.id === roomId && activeContext.type === 'room') return;
             activeContext = { type: 'room', id: roomId };
             
-            document.querySelectorAll('.room-item, .user-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`room-${roomId}`).classList.add('active');
-            document.querySelector(`#room-${roomId} .notification-badge`)?.classList.add('hidden');
+            document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active', 'bg-white/5', 'shadow-sm'));
+            const listItem = document.getElementById(`conv-room-${roomId}`);
+            if (listItem) {
+                listItem.classList.add('active', 'bg-white/5', 'shadow-sm');
+                listItem.querySelector('.notification-badge')?.classList.add('hidden');
+                const countSpan = listItem.querySelector('.unread-count');
+                if(countSpan) countSpan.innerText = '0';
+            }
             
             document.getElementById('header-icon').innerText = '#';
             document.getElementById('current-context-name').innerText = roomId;
-            document.getElementById('current-context-desc').innerText = `Salon public - ${roomId}`;
+            document.getElementById('current-context-desc').innerText = `Groupe / Salon`;
+            
+            // Context actions
+            const actionBtn = document.getElementById('context-action-btn');
+            if(roomId === 'Général') {
+                actionBtn.classList.add('hidden');
+            } else {
+                actionBtn.classList.remove('hidden');
+                actionBtn.innerText = "Quitter le groupe";
+                actionBtn.onclick = () => { socket.emit('leave_group', {username: currentUser, group_name: roomId}); };
+            }
+
             const input = document.getElementById('message-input');
             input.placeholder = `Envoyer dans ${roomId}...`;
             input.focus();
@@ -278,14 +392,27 @@
             if (activeContext.id === peerName && activeContext.type === 'pm') return;
             activeContext = { type: 'pm', id: peerName };
             
-            document.querySelectorAll('.room-item, .user-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`user-${peerName}`).classList.add('active');
+            document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active', 'bg-white/5', 'shadow-sm'));
+            const listItem = document.getElementById(`conv-pm-${peerName}`);
+            if (listItem) {
+                listItem.classList.add('active', 'bg-white/5', 'shadow-sm');
+                listItem.querySelector('.notification-badge')?.classList.add('hidden');
+                const countSpan = listItem.querySelector('.unread-count');
+                if(countSpan) countSpan.innerText = '0';
+            }
             
             document.getElementById('header-icon').innerText = '@';
             document.getElementById('current-context-name').innerText = peerName;
-            document.getElementById('current-context-desc').innerText = "Discussion privée sécurisée";
+            document.getElementById('current-context-desc').innerText = "Discussion privée";
+            
+            // Context actions
+            const actionBtn = document.getElementById('context-action-btn');
+            actionBtn.classList.remove('hidden');
+            actionBtn.innerText = "Supprimer le contact";
+            actionBtn.onclick = () => { socket.emit('remove_contact', {username: currentUser, contact: peerName}); switchRoom('Général'); };
+
             const input = document.getElementById('message-input');
-            input.placeholder = `Lacher un petit MP à ${peerName}...`;
+            input.placeholder = `Message à ${peerName}...`;
             input.focus();
             
             document.getElementById('messages-container').innerHTML = '<div id="scroll-anchor"></div>';
@@ -319,22 +446,65 @@
             anchor.scrollIntoView({ behavior: 'smooth' });
         }
 
+        function showToast(msg, success=true) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.className = `fixed bottom-6 right-6 z-50 px-6 py-4 rounded-xl border shadow-2xl text-sm font-medium text-white transition-all duration-300 ${success ? 'bg-emerald-500/90 border-emerald-400' : 'bg-red-500/90 border-red-400'}`;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 4000);
+        }
+
+        socket.on('notification', (data) => {
+            showToast(data.message, data.success);
+            if(data.success) {
+                document.getElementById('add-contact-modal').classList.add('hidden');
+                document.getElementById('create-group-modal').classList.add('hidden');
+            }
+        });
+
         socket.on('status_update', (data) => {
-            const list = document.getElementById('user-list');
-            document.getElementById('user-count-badge').innerText = data.users.length;
+            // Optionnel : stocker le statut online/offline pour l'affichage visuel
+            // Mais la liste unifiée est gérée par conversations_data
+        });
+
+        socket.on('conversations_data', (data) => {
+            const list = document.getElementById('conversations-list');
             list.innerHTML = "";
-            data.users.forEach(user => {
-                if(user === currentUser) return;
+            
+            // Groupes
+            data.groups.forEach(group => {
                 const li = document.createElement('li');
-                li.id = `user-${user}`;
-                li.onclick = () => openMP(user);
-                li.className = `user-item flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-white/5 transition-all text-sm group ${activeContext.id === user ? 'active' : ''}`;
+                li.id = `conv-room-${group}`;
+                li.onclick = () => switchRoom(group);
+                li.className = `conv-item flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer hover:bg-white/5 transition-all text-sm group ${activeContext.id === group && activeContext.type === 'room' ? 'active bg-white/5 shadow-sm' : ''}`;
                 li.innerHTML = `
-                    <div class="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold text-white shrink-0 group-hover:scale-105 transition-transform" style="background:${getColor(user)}">
-                        ${user[0].toUpperCase()}
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 group-hover:scale-105 transition-transform bg-cobalt ring-2 ring-cobalt/20 shadow-inner shadow-black/20">
+                        #
                     </div>
-                    <span class="font-medium text-frost/70">${user}</span>
-                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 ml-auto ring-4 ring-emerald-500/10"></div>
+                    <div class="flex flex-col min-w-0 flex-1">
+                        <span class="font-bold text-frost truncate">${group}</span>
+                        <span class="text-[10px] text-frost/40 truncate">Groupe</span>
+                    </div>
+                    <span class="notification-badge hidden px-2 py-0.5 rounded-full bg-azure text-[10px] font-bold text-deep shadow-[0_0_10px_#6B9BF7]"><span class="unread-count">0</span></span>
+                `;
+                list.appendChild(li);
+            });
+
+            // Contacts (MPs)
+            data.contacts.forEach(contact => {
+                const li = document.createElement('li');
+                li.id = `conv-pm-${contact}`;
+                li.onclick = () => openMP(contact);
+                li.className = `conv-item flex items-center gap-3 px-3 py-3 rounded-xl cursor-pointer hover:bg-white/5 transition-all text-sm group ${activeContext.id === contact && activeContext.type === 'pm' ? 'active bg-white/5 shadow-sm' : ''}`;
+                li.innerHTML = `
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 group-hover:scale-105 transition-transform shadow-inner shadow-black/20" style="background:${getColor(contact)}">
+                        ${contact[0].toUpperCase()}
+                    </div>
+                    <div class="flex flex-col min-w-0 flex-1">
+                        <span class="font-bold text-frost truncate">${contact}</span>
+                        <span class="text-[10px] text-frost/40 truncate">Contact / MP</span>
+                    </div>
+                    <span class="notification-badge hidden px-2 py-0.5 rounded-full bg-emerald-400 text-[10px] font-bold text-deep shadow-[0_0_10px_#34d399]"><span class="unread-count">0</span></span>
                 `;
                 list.appendChild(li);
             });
@@ -345,11 +515,73 @@
             if (data.room === currentRoomId) {
                 appendMsg(data);
             } else {
-                const targetId = data.is_private ? `user-${data.username === currentUser ? data.target : data.username}` : `room-${data.room}`;
+                const targetId = data.is_private ? `conv-pm-${data.username === currentUser ? data.target : data.username}` : `conv-room-${data.room}`;
                 const badge = document.querySelector(`#${targetId} .notification-badge`);
-                if(badge) badge.classList.remove('hidden');
+                if(badge) {
+                    badge.classList.remove('hidden');
+                    const countSpan = badge.querySelector('.unread-count');
+                    countSpan.innerText = parseInt(countSpan.innerText) + 1;
+                }
             }
         });
+
+        // ------------------ ADVANCED LOGIC ------------------
+
+        function logout() {
+            window.location.reload();
+        }
+
+        function searchUsers(query, containerId) {
+            // Pour les groupes, on prend juste le dernier pseudo après la virgule
+            let q = query;
+            if (containerId === 'group-suggestions') {
+                const parts = query.split(',');
+                q = parts[parts.length - 1].trim();
+            }
+            if(q.length >= 1) {
+                window.currentSuggestionsContainer = containerId;
+                socket.emit('search_users', {query: q});
+            } else {
+                document.getElementById(containerId).classList.add('hidden');
+            }
+        }
+
+        socket.on('search_results', (data) => {
+            if (!window.currentSuggestionsContainer) return;
+            const ul = document.getElementById(window.currentSuggestionsContainer);
+            ul.innerHTML = "";
+            if (data.results.length > 0) {
+                ul.classList.remove('hidden');
+                data.results.forEach(user => {
+                    if(user === currentUser) return;
+                    const li = document.createElement('li');
+                    li.className = "px-4 py-3 hover:bg-white/10 cursor-pointer text-sm text-frost border-b border-white/5 last:border-0";
+                    li.innerText = user;
+                    li.onclick = () => {
+                        const inputId = window.currentSuggestionsContainer === 'contact-suggestions' ? 'contact-input' : 'group-members-input';
+                        const input = document.getElementById(inputId);
+                        
+                        if (inputId === 'group-members-input') {
+                            let tokens = input.value.split(',');
+                            tokens.pop();
+                            tokens.push(" " + user);
+                            input.value = tokens.join(',') + ", ";
+                        } else {
+                            input.value = user;
+                        }
+                        ul.classList.add('hidden');
+                    };
+                    ul.appendChild(li);
+                });
+            } else {
+                ul.classList.remove('hidden');
+                const li = document.createElement('li');
+                li.className = "px-4 py-3 text-sm text-frost/40 italic cursor-default";
+                li.innerText = "Aucun utilisateur trouvé";
+                ul.appendChild(li);
+            }
+        });
+
 
         socket.on('room_history', (data) => {
             data.history.forEach(m => appendMsg({username: m.sender, message: m.content, time: m.timestamp, is_private: m.room.startsWith('pm:')}));
@@ -405,16 +637,146 @@
 
         document.getElementById('join-btn').onclick = () => {
             const pseudo = document.getElementById('username-input').value.trim();
-            if(!pseudo) return;
-            currentUser = pseudo;
-            document.getElementById('my-username-display').innerText = pseudo;
-            document.getElementById('my-avatar-display').innerText = pseudo[0].toUpperCase();
-            document.getElementById('my-avatar-display').style.background = getColor(pseudo);
-            document.getElementById('login-modal').remove();
+            const pwd = document.getElementById('password-input').value.trim();
+            if(!pseudo || !pwd) return;
+            
+            const btn = document.getElementById('join-btn');
+            const errorP = document.getElementById('login-error');
+            
+            btn.innerText = "Connexion...";
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            errorP.classList.add('hidden');
+            
+            // Connect to socket and emit login intent
             socket.connect();
-            socket.emit('connect_user', { username: currentUser });
-            switchRoom('Général');
+            socket.emit('connect_user', { username: pseudo, password: pwd });
         };
+
+        socket.on('login_result', (data) => {
+            const btn = document.getElementById('join-btn');
+            btn.innerText = "Connexion / Inscription";
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            if(data.success) {
+                const pseudo = document.getElementById('username-input').value.trim();
+                currentUser = pseudo;
+                document.getElementById('my-username-display').innerText = pseudo;
+                document.getElementById('my-avatar-display').innerText = pseudo[0].toUpperCase();
+                document.getElementById('my-avatar-display').style.background = getColor(pseudo);
+                document.getElementById('login-modal').classList.add('hidden');
+                document.getElementById('password-input').value = "";
+                switchRoom('Général');
+                showToast(data.message, true);
+            } else {
+                const errorP = document.getElementById('login-error');
+                errorP.innerText = data.message;
+                errorP.classList.remove('hidden');
+            }
+        });
+
+
+        // ACTIONS MODALS
+        document.getElementById('add-contact-btn').onclick = () => {
+            const contact = document.getElementById('contact-input').value.trim();
+            if(!contact) return;
+            socket.emit('add_contact', { username: currentUser, contact: contact });
+            document.getElementById('contact-input').value = "";
+        };
+
+        document.getElementById('create-group-btn').onclick = () => {
+            const name = document.getElementById('group-name-input').value.trim();
+            const membersStr = document.getElementById('group-members-input').value.trim();
+            if(!name) return;
+            const members = membersStr.split(',').map(m => m.trim()).filter(m => m);
+            socket.emit('create_group', { username: currentUser, group_name: name, members: members });
+            document.getElementById('group-name-input').value = "";
+            document.getElementById('group-members-input').value = "";
+        };
+
+        // PROFILE LOGIC
+        function openMyProfile() {
+            document.getElementById('edit-profile-avatar').innerText = currentUser[0].toUpperCase();
+            document.getElementById('edit-profile-avatar').style.background = getColor(currentUser);
+            // On pourrait fetch la bio, mais pour l'instant c'est vide visuellement au premier clic
+            document.getElementById('edit-profile-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('save-profile-btn').onclick = () => {
+            const bio = document.getElementById('my-bio-input').value.trim();
+            socket.emit('update_profile', {username: currentUser, bio: bio});
+            document.getElementById('edit-profile-modal').classList.add('hidden');
+        };
+
+        function openContactInfo() {
+            if (activeContext.type === 'pm') {
+                socket.emit('get_profile', {username: activeContext.id});
+            } else if (activeContext.type === 'room' && activeContext.id !== 'Général') {
+                socket.emit('get_group_info', {group_name: activeContext.id});
+            }
+        }
+
+        socket.on('profile_data', (data) => {
+            document.getElementById('contact-info-username').innerText = data.username;
+            document.getElementById('contact-info-avatar').innerText = data.username[0].toUpperCase();
+            document.getElementById('contact-info-avatar').style.background = getColor(data.username);
+            document.getElementById('contact-info-bio').innerText = data.bio || "Salut ! J'utilise ChatPro.";
+            document.getElementById('contact-info-modal').classList.remove('hidden');
+        });
+
+        // GROUP ADMIN LOGIC
+        socket.on('group_info_data', (data) => {
+            document.getElementById('group-info-name').innerText = data._id;
+            document.getElementById('group-info-creator').innerText = data.creator;
+            document.getElementById('group-info-count').innerText = data.members.length;
+            
+            const isAdmin = (currentUser === data.creator);
+            document.getElementById('group-admin-tools').classList.toggle('hidden', !isAdmin);
+            
+            const list = document.getElementById('group-members-list');
+            list.innerHTML = "";
+            data.members.forEach(m => {
+                const isCreator = (m === data.creator);
+                const badge = isCreator ? `<span class="bg-cobalt/20 text-cobalt text-[10px] uppercase px-2 py-0.5 rounded font-bold ml-2">Admin</span>` : "";
+                const kickBtn = (isAdmin && !isCreator) ? `<button onclick="kickGroupMember('${data._id}', '${m}')" class="ml-auto text-xs text-red-400 hover:text-red-300 bg-red-400/10 px-2 py-1 rounded">Exclure</button>` : "";
+                
+                list.innerHTML += `
+                    <div class="flex items-center gap-3 p-2 bg-white/5 rounded-xl border border-white/5">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white shadow" style="background:${getColor(m)}">${m[0].toUpperCase()}</div>
+                        <span class="text-sm font-medium text-frost">${m} ${badge}</span>
+                        ${kickBtn}
+                    </div>
+                `;
+            });
+            document.getElementById('group-info-modal').classList.remove('hidden');
+        });
+
+        function addGroupMember() {
+            const memberInput = document.getElementById('group-add-member-input');
+            const memberName = memberInput.value.trim();
+            if (!memberName) return;
+            const context = document.getElementById('group-info-name').innerText;
+            socket.emit('add_group_members', {username: currentUser, group_name: context, members: [memberName]});
+            memberInput.value = "";
+        }
+
+        function kickGroupMember(group_name, target) {
+            if(confirm(`Voulez-vous vraiment exclure ${target} ?`)) {
+                socket.emit('kick_group_member', {username: currentUser, group_name: group_name, target: target});
+            }
+        }
+
+        socket.on('group_members_updated', (data) => {
+            if (activeContext.type === 'room' && activeContext.id === data.group_name && !document.getElementById('group-info-modal').classList.contains('hidden')) {
+                socket.emit('get_group_info', {group_name: data.group_name});
+            }
+        });
+
+        socket.on('kicked_from_group', (data) => {
+            if (activeContext.type === 'room' && activeContext.id === data.group_name) {
+                switchRoom('Général');
+            }
+        });
+
     </script>
 </body>
 </html>
