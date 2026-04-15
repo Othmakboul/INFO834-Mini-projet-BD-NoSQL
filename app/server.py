@@ -2,100 +2,183 @@ import socket
 import threading
 from database import get_redis_client
 from mongodb_manager import MongoManager
-import datetime
 
 HOST = '127.0.0.1'
 PORT = 5555
 
-# Initialisation des outils NoSQL
-mongo = MongoManager()
-redis_c = get_redis_client()
-clients_connectes = {}
+# TTL en secondes pour les clés Redis (renouvellé à chaque message)
+REDIS_TTL = 300
 
-def diffuser_message(message_str, client_expediteur=None):
-    """Envoie un message à tout le monde."""
-    for client in clients_connectes:
+clients_connectes = {}  # socket -> pseudo
+redis_client = get_redis_client()
+mongo_manager = MongoManager()
+lock = threading.Lock()
+
+
+def diffuser_message(message, client_expediteur=None):
+    """Envoie un message à tous les clients connectés, sauf à l'expéditeur."""
+    with lock:
+        destinataires = list(clients_connectes.keys())
+    for client in destinataires:
         if client != client_expediteur:
             try:
-                client.send(message_str.encode('utf-8'))
+                client.send(message)
             except:
                 client.close()
+                with lock:
+                    clients_connectes.pop(client, None)
+
+
+def envoyer_message_prive(message, pseudo_destinataire, client_expediteur):
+    """Envoie un message privé à un utilisateur spécifique."""
+    with lock:
+        socket_destinataire = next(
+            (sock for sock, pseudo in clients_connectes.items() if pseudo == pseudo_destinataire),
+            None
+        )
+    if socket_destinataire:
+        try:
+            socket_destinataire.send(message)
+            return True
+        except:
+            pass
+    return False
+
+
+def get_liste_connectes():
+    """Retourne la liste des pseudos connectés depuis Redis."""
+    pseudos = redis_client.keys("user:*")
+    return [p.replace("user:", "") for p in pseudos]
+
 
 def gerer_client(client_socket, adresse):
+    """Gère la connexion d'un client spécifique (tourne dans un Thread)."""
+    pseudo = None
     try:
-        # 1. Connexion : On récupère le pseudo
-        pseudo = client_socket.recv(1024).decode('utf-8')
-        clients_connectes[client_socket] = pseudo
+        # 1. Récupération du pseudo
+        pseudo = client_socket.recv(1024).decode('utf-8').strip()
+        with lock:
+            clients_connectes[client_socket] = pseudo
 
-        # --- PARTIE REDIS : GESTION DES CONNECTÉS ET HISTORIQUE ---
-        # On ajoute l'utilisateur au Set des connectés
-        redis_c.sadd("online_users", pseudo)
+        # --- REDIS : Marquer l'utilisateur en ligne avec TTL ---
+        redis_client.set(f"user:{pseudo}", "en ligne", ex=REDIS_TTL)
 
-        # On ajoute une trace dans l'historique (Liste)
-        maintenant = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_msg = f"[{maintenant}] Connexion de {pseudo}"
-        redis_c.lpush("login_history", log_msg)
-
-        print(f"[+] {pseudo} est en ligne (Set Redis mis à jour)")
-
-        diffuser_message(f"--- {pseudo} a rejoint le tchat ---", client_socket)
+        print(f"[+] {pseudo} s'est connecté depuis {adresse}")
+        diffuser_message(f"--- {pseudo} a rejoint le tchat ---".encode('utf-8'), client_socket)
 
         while True:
-            message_brut = client_socket.recv(1024).decode('utf-8')
-            if not message_brut: break
+            message_brut = client_socket.recv(1024)
+            if not message_brut:
+                break
 
-            # ---  COMMANDES SPÉCIALES REDIS ---
-            if message_brut.strip() == '/users':
-                # On récupère tous les membres du Set Redis
-                membres = redis_c.smembers("online_users")
-                liste_membres = ", ".join(membres) if membres else "Personne"
-                reponse = f"\n[Serveur Redis] En ligne : {liste_membres}\n"
+            texte = message_brut.decode('utf-8').strip()
+
+            # Renouveler le TTL Redis à chaque activité
+            redis_client.expire(f"user:{pseudo}", REDIS_TTL)
+
+            # --- Commande : /liste ---
+            if texte == "/liste":
+                connectes = get_liste_connectes()
+                reponse = "Connectés : " + ", ".join(connectes) if connectes else "Aucun utilisateur connecté."
                 client_socket.send(reponse.encode('utf-8'))
-                continue
-            elif message_brut.strip() == '/historique':
-                # Récupère les 10 derniers événements de la Liste Redis
-                logs = redis_c.lrange("login_history", 0, 9)
-                texte_logs = "\n".join(logs) if logs else "Aucun historique."
-                reponse = f"\n[Serveur Redis] --- 10 derniers logs ---\n{texte_logs}\n"
+
+            # --- Commande : /stats ---
+            elif texte == "/stats":
+                try:
+                    lines = mongo_manager.get_full_stats()
+                    reponse = "\n".join(lines)
+                except Exception as e:
+                    reponse = f"Erreur MongoDB : {e}"
                 client_socket.send(reponse.encode('utf-8'))
-                continue
 
-            # --- PARTIE MONGODB ---
-            # On stocke CHAQUE message dans MongoDB
-            mongo.save_message(sender=pseudo, receiver="GLOBAL", content=message_brut)
+            # --- Commande : /historique <user> ---
+            elif texte.startswith("/historique "):
+                autre_user = texte[len("/historique "):].strip()
+                try:
+                    conversation = mongo_manager.get_conversation(pseudo, autre_user)
+                    reponse = "\n".join(conversation) if conversation else f"Aucune conversation trouvée avec {autre_user}."
+                except Exception as e:
+                    reponse = f"Erreur MongoDB : {e}"
+                client_socket.send(reponse.encode('utf-8'))
 
-            # Affichage et diffusion
-            message_formate = f"{pseudo}: {message_brut}"
-            print(message_formate)
-            diffuser_message(message_formate, client_socket)
+            # --- Commande : /search <mot-clé> ---
+            elif texte.startswith("/search "):
+                keyword = texte[len("/search "):].strip()
+                try:
+                    resultats = mongo_manager.search_by_keyword(keyword)
+                    reponse = "\n".join(resultats) if resultats else f"Aucun message contenant '{keyword}'."
+                except Exception as e:
+                    reponse = f"Erreur MongoDB : {e}"
+                client_socket.send(reponse.encode('utf-8'))
+
+            # --- Commande : /plage <HH:MM> <HH:MM> ---
+            elif texte.startswith("/plage "):
+                parties = texte[len("/plage "):].strip().split()
+                if len(parties) == 2:
+                    try:
+                        resultats = mongo_manager.search_by_time_range(parties[0], parties[1])
+                        reponse = "\n".join(resultats) if resultats else f"Aucun message entre {parties[0]} et {parties[1]}."
+                    except Exception as e:
+                        reponse = f"Erreur : {e}"
+                else:
+                    reponse = "Usage: /plage HH:MM HH:MM"
+                client_socket.send(reponse.encode('utf-8'))
+
+            # --- Commande : /msg <pseudo> <message> ---
+            elif texte.startswith("/msg "):
+                parties = texte[5:].split(" ", 1)
+                if len(parties) == 2:
+                    destinataire, contenu = parties
+                    try:
+                        mongo_manager.save_message(sender=pseudo, receiver=destinataire, content=contenu)
+                    except Exception as e:
+                        print(f"[WARN] MongoDB save_message échoué: {e}")
+                    msg_prive = f"[Privé] {pseudo} -> {destinataire}: {contenu}".encode('utf-8')
+                    succes = envoyer_message_prive(msg_prive, destinataire, client_socket)
+                    if succes:
+                        client_socket.send(f"[Privé envoyé à {destinataire}]: {contenu}".encode('utf-8'))
+                    else:
+                        client_socket.send(f"Utilisateur '{destinataire}' introuvable ou déconnecté.".encode('utf-8'))
+                else:
+                    client_socket.send("Usage: /msg <pseudo> <message>".encode('utf-8'))
+
+            # --- Message public ---
+            else:
+                try:
+                    mongo_manager.save_message(sender=pseudo, receiver="Tous", content=texte)
+                except Exception as e:
+                    print(f"[WARN] MongoDB save_message échoué: {e}")
+                message_formate = f"{pseudo}: {texte}".encode('utf-8')
+                print(message_formate.decode('utf-8'))
+                diffuser_message(message_formate, client_socket)
 
     except Exception as e:
         print(f"Erreur avec {adresse}: {e}")
     finally:
-        if client_socket in clients_connectes:
-            pseudo_deco = clients_connectes[client_socket]
-            # --- PARTIE REDIS : DÉCONNEXION ---
-            # On supprime l'utilisateur du Set Redis quand il part
-            redis_c.srem("online_users", pseudo_deco)
+        with lock:
+            pseudo_deco = clients_connectes.pop(client_socket, pseudo)
+        client_socket.close()
 
-            # On trace la déconnexion dans l'historique
-            maintenant = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            redis_c.lpush("login_history", f"[{maintenant}] Déconnexion de {pseudo_deco}")
+        if pseudo_deco:
+            redis_client.delete(f"user:{pseudo_deco}")
+            print(f"[-] {pseudo_deco} s'est déconnecté.")
+            diffuser_message(f"--- {pseudo_deco} a quitté le tchat ---".encode('utf-8'))
 
-            del clients_connectes[client_socket]
-            client_socket.close()
-            diffuser_message(f"--- {pseudo_deco} a quitté le tchat ---")
 
 def demarrer_serveur():
     serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serveur.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serveur.bind((HOST, PORT))
     serveur.listen()
-    print(f"[*] Serveur actif avec MongoDB ReplicaSet et Redis.")
+    print(f"[*] Serveur actif avec MongoDB ReplicaSet et Redis sur {HOST}:{PORT}")
+    print("[*] Commandes disponibles : /liste | /msg <pseudo> <msg> | /historique <pseudo>")
 
     while True:
         client_socket, adresse = serveur.accept()
         thread = threading.Thread(target=gerer_client, args=(client_socket, adresse))
+        thread.daemon = True
         thread.start()
+
 
 if __name__ == "__main__":
     demarrer_serveur()

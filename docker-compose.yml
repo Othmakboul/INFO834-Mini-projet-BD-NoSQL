@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # LE BLOC REDIS MANQUANT :
   redis:
     image: redis:latest
     container_name: tchat_redis
@@ -13,7 +12,7 @@ services:
   mongo1:
     image: mongo:latest
     container_name: mongo_primary
-    command: ["--replSet", "tchat-rs", "--bind_ip_all", "--port", "27017"]
+    command: ["--replSet", "tchat-rs", "--bind_ip_all"]
     ports:
       - "27017:27017"
     networks:
@@ -22,18 +21,18 @@ services:
   mongo2:
     image: mongo:latest
     container_name: mongo_secondary
-    command: ["--replSet", "tchat-rs", "--bind_ip_all", "--port", "27018"]
+    command: ["--replSet", "tchat-rs", "--bind_ip_all"]
     ports:
-      - "27018:27018"
+      - "27018:27017"
     networks:
       - tchat_net
 
   mongo3:
     image: mongo:latest
     container_name: mongo_arbiter
-    command: ["--replSet", "tchat-rs", "--bind_ip_all", "--port", "27019"]
+    command: ["--replSet", "tchat-rs", "--bind_ip_all"]
     ports:
-      - "27019:27019"
+      - "27019:27017"
     networks:
       - tchat_net
 

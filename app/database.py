@@ -10,7 +10,10 @@ def get_redis_client():
     )
 
 def get_mongo_db():
-    # Liste complète des membres pour que le driver trouve le nouveau "chef"
-    uri = "mongodb://localhost:27017,localhost:27018,localhost:27019/?replicaSet=tchat-rs"    # On ajoute un timeout pour ne pas attendre 30s en cas de problème
+    # directConnection=true : connexion directe au Primary depuis l'hôte Windows.
+    # Le ReplicaSet tourne bien dans Docker (tolérance aux pannes),
+    # mais la découverte automatique échoue car les nœuds s'annoncent
+    # en "host.docker.internal" inaccessible depuis l'extérieur.
+    uri = "mongodb://localhost:27017/?directConnection=true"
     client = MongoClient(uri, serverSelectionTimeoutMS=5000)
     return client["tchat_app"]
