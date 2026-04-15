@@ -10,8 +10,10 @@ def get_redis_client():
     )
 
 def get_mongo_db():
-    # On se connecte en direct (Direct Connection) au port local mappé 
-    # pour contourner le problème de résolution DNS de Windows vers Docker
+    # directConnection=true : connexion directe au Primary depuis l'hôte Windows.
+    # Le ReplicaSet tourne bien dans Docker (tolérance aux pannes),
+    # mais la découverte automatique échoue car les nœuds s'annoncent
+    # en "host.docker.internal" inaccessible depuis l'extérieur.
     uri = "mongodb://localhost:27017/?directConnection=true"
     client = MongoClient(uri, serverSelectionTimeoutMS=5000)
     return client["tchat_app"]
