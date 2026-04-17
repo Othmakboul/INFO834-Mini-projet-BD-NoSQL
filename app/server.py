@@ -34,7 +34,9 @@ def ecouter_redis_pour_tcp():
     pubsub.subscribe('chat_room:Général')
     for message in pubsub.listen():
         if message['type'] == 'message':
-            data = message['data'].decode('utf-8')
+            data = message['data']
+            if isinstance(data, bytes):
+                data = data.decode('utf-8')
             # On n'affiche que les messages venant du WEB
             if data.startswith('[WEB]'):
                 msg_formate = f"\n{data}\n> ".encode('utf-8')
@@ -61,7 +63,7 @@ def envoyer_message_prive(message, pseudo_destinataire, client_expediteur):
 def get_liste_connectes():
     """Retourne la liste des pseudos connectés depuis Redis."""
     pseudos = redis_client.keys("user:*")
-    return [p.replace("user:", "") for p in pseudos]
+    return [p.decode('utf-8').replace("user:", "") if isinstance(p, bytes) else p.replace("user:", "") for p in pseudos]
 
 
 def gerer_client(client_socket, adresse):
@@ -89,13 +91,12 @@ def gerer_client(client_socket, adresse):
             # Renouveler le TTL Redis à chaque activité
             redis_client.expire(f"user:{pseudo}", REDIS_TTL)
 
-            # --- Commande : /liste ---
+            # --- COMMANDES ---
             if texte == "/liste":
                 connectes = get_liste_connectes()
                 reponse = "Connectés : " + ", ".join(connectes) if connectes else "Aucun utilisateur connecté."
                 client_socket.send(reponse.encode('utf-8'))
 
-            # --- Commande : /stats ---
             elif texte == "/stats":
                 try:
                     lines = mongo_manager.get_full_stats_as_lines()
@@ -104,46 +105,30 @@ def gerer_client(client_socket, adresse):
                     reponse = f"Erreur MongoDB : {e}"
                 client_socket.send(reponse.encode('utf-8'))
 
-            # --- Commande : /historique <user> ---
             elif texte.startswith("/historique "):
                 autre_user = texte[len("/historique "):].strip()
                 try:
-                    conversation = mongo_manager.get_conversation(pseudo, autre_user)
-                    reponse = "\n".join(conversation) if conversation else f"Aucune conversation trouvée avec {autre_user}."
+                    conversation = mongo_manager.get_room_history(f"pm:{min(pseudo, autre_user)}:{max(pseudo, autre_user)}")
+                    reponse = "\n".join([f"{m['sender']}: {m['content']}" for m in conversation]) if conversation else f"Aucune conversation trouvée avec {autre_user}."
                 except Exception as e:
                     reponse = f"Erreur MongoDB : {e}"
                 client_socket.send(reponse.encode('utf-8'))
 
-            # --- Commande : /search <mot-clé> ---
             elif texte.startswith("/search "):
                 keyword = texte[len("/search "):].strip()
                 try:
                     resultats = mongo_manager.search_by_keyword(keyword)
-                    reponse = "\n".join(resultats) if resultats else f"Aucun message contenant '{keyword}'."
+                    reponse = "\n".join([f"{m['sender']}: {m['content']}" for m in resultats]) if resultats else f"Aucun message contenant '{keyword}'."
                 except Exception as e:
                     reponse = f"Erreur MongoDB : {e}"
                 client_socket.send(reponse.encode('utf-8'))
 
-            # --- Commande : /plage <HH:MM> <HH:MM> ---
-            elif texte.startswith("/plage "):
-                parties = texte[len("/plage "):].strip().split()
-                if len(parties) == 2:
-                    try:
-                        resultats = mongo_manager.search_by_time_range(parties[0], parties[1])
-                        reponse = "\n".join(resultats) if resultats else f"Aucun message entre {parties[0]} et {parties[1]}."
-                    except Exception as e:
-                        reponse = f"Erreur : {e}"
-                else:
-                    reponse = "Usage: /plage HH:MM HH:MM"
-                client_socket.send(reponse.encode('utf-8'))
-
-            # --- Commande : /msg <pseudo> <message> ---
             elif texte.startswith("/msg "):
                 parties = texte[5:].split(" ", 1)
                 if len(parties) == 2:
                     destinataire, contenu = parties
                     try:
-                        mongo_manager.save_message(sender=pseudo, receiver=destinataire, content=contenu)
+                        mongo_manager.save_message(sender=pseudo, receiver=destinataire, content=contenu, room=f"pm:{min(pseudo, destinataire)}:{max(pseudo, destinataire)}")
                     except Exception as e:
                         print(f"[WARN] MongoDB save_message échoué: {e}")
                     msg_prive = f"[Privé] {pseudo} -> {destinataire}: {contenu}".encode('utf-8')
@@ -155,10 +140,11 @@ def gerer_client(client_socket, adresse):
                 else:
                     client_socket.send("Usage: /msg <pseudo> <message>".encode('utf-8'))
 
+            else:
+                # Message Global
                 try:
                     mongo_manager.save_message(sender=pseudo, receiver="Tous", content=texte)
                     # --- SYNC AVEC LE WEB via REDIS ---
-                    # Format: [TCP] Pseudo: Message
                     redis_client.publish('chat_room:Général', f"[TCP] {pseudo}: {texte}")
                 except Exception as e:
                     print(f"[WARN] Erreur liaison MongoDB/Redis: {e}")
@@ -190,7 +176,7 @@ def demarrer_serveur():
     serveur.bind((HOST, PORT))
     serveur.listen()
     print(f"[*] Serveur actif avec MongoDB ReplicaSet et Redis sur {HOST}:{PORT}")
-    print("[*] Commandes disponibles : /liste | /msg <pseudo> <msg> | /historique <pseudo>")
+    print("[*] Commandes disponibles : /liste | /msg <pseudo> <msg> | /historique <pseudo> | /stats | /search <mot>")
 
     while True:
         client_socket, adresse = serveur.accept()
