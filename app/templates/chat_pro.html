@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatPro Elite — NoSQL Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f4ff',
+                            100: '#e0e9fe',
+                            200: '#c7d7fe',
+                            300: '#9fb9fd',
+                            400: '#7190f9',
+                            500: '#4b79e4', // Cobalt
+                            600: '#3b5fbd',
+                            700: '#2c458d',
+                            800: '#1f3164',
+                            900: '#0f172a', // Deep
+                        },
+                        accent: '#6B9BF7', // Azure
+                        surface: '#050A18',
+                    },
+                    fontFamily: {
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        body: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'premium': '0 20px 50px rgba(0, 0, 0, 0.4)',
+                        'glass': 'inset 0 1px 1px 0 rgba(255, 255, 255, 0.1), 0 8px 32px 0 rgba(0, 0, 0, 0.3)',
+                        'glow': '0 0 15px rgba(75, 121, 228, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --glass-bg: rgba(15, 23, 42, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent-glow: rgba(75, 121, 228, 0.3);
+        }
+
+        body {
+            background: #050A18;
+            color: #E8EEFF;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Animated Background */
+        .bg-mesh {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-color: #050A18;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(30, 58, 138, 0.3) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.5) 0px, transparent 50%),
+                radial-gradient(at 50% 0%, rgba(75, 121, 228, 0.1) 0px, transparent 50%);
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-glass);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(75, 121, 228, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(75, 121, 228, 0.3); }
+
+        /* Animations */
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        .typing-dot {
+            width: 4px;
+            height: 4px;
+            background: #6B9BF7;
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite ease-in-out;
+        }
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .search-highlight {
+            background: rgba(75, 121, 228, 0.3);
+            color: #fff;
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: 600;
+        }
+
+        /* Neumorphic Shadow for Avatars */
+        .avatar-shadow {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body class="flex items-center justify-center p-0 md:p-6 overflow-hidden">
+    <div class="bg-mesh"></div>
+
+    <div class="relative z-10 w-full h-full max-w-[1600px] flex gap-4 animate-slide-up">
+        
+        <!-- SIDEBAR LEFT: NAVIGATION -->
+        <aside class="glass-panel rounded-[2rem] w-[320px] hidden lg:flex flex-col shadow-premium overflow-hidden border-white/5">
+            <!-- App Branding -->
+            <div class="p-8 pb-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-2xl bg-brand-500 flex items-center justify-center shadow-glow">
+                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="font-display font-bold text-xl tracking-tight text-white">ChatPro <span class="text-accent">Elite</span></h2>
+                        <span class="text-[10px] uppercase tracking-widest text-brand-300 font-semibold opacity-60">NoSQL Engine V2</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Actions -->
+            <div class="px-6 py-4 flex gap-2">
+                <button onclick="document.getElementById('add-contact-modal').classList.remove('hidden')" 
+                    class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold transition-all border border-white/5">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 4v16m8-8H4" stroke-width="3"/></svg>
+                    Contact
+                </button>
+                <button onclick="document.getElementById('create-group-modal').classList.remove('hidden')"
+                    class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 text-xs font-bold transition-all border border-brand-500/20">
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2" stroke-width="2.5"/></svg>
+                    Groupe
+                </button>
+            </div>
+
+            <!-- Conversation List -->
+            <div class="flex-1 overflow-y-auto px-4 py-4 custom-scroll">
+                <div class="text-[11px] font-bold text-white/30 uppercase tracking-[0.2em] px-4 mb-3">Conversations</div>
+                <ul id="conversations-list" class="space-y-1">
+                    <!-- Dynamic Content -->
+                </ul>
+            </div>
+
+            <!-- User Profile (Bottom) -->
+            <div class="p-4 bg-black/40 border-t border-white/5">
+                <div class="glass-card rounded-2xl p-3 flex items-center gap-3">
+                    <div class="flex items-center gap-3 flex-1 cursor-pointer" onclick="openMyProfile()">
+                        <div class="relative">
+                            <div id="my-avatar-display" class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-lg avatar-shadow">?</div>
+                            <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-[3px] border-surface"></div>
+                        </div>
+                        <div class="min-w-0 pr-2">
+                            <p id="my-username-display" class="text-sm font-bold text-white truncate">Pseudo</p>
+                            <p class="text-[10px] text-white/40 font-medium">Session Active</p>
+                        </div>
+                    </div>
+                    <button onclick="logout()" class="w-9 h-9 rounded-xl flex items-center justify-center text-white/30 hover:text-red-400 hover:bg-red-400/10 transition-all">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 16l4-4m0 0l-4-4m4 4H7" stroke-width="2.5"/></svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 glass-panel rounded-[2rem] shadow-premium flex flex-col overflow-hidden relative">
+            <!-- Header -->
+            <header class="h-20 px-8 flex items-center justify-between border-b border-white/5 bg-white/[0.02]">
+                <div class="flex items-center gap-4 cursor-pointer group" onclick="openContactInfo()">
+                    <div id="header-icon" class="w-11 h-11 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-xl text-brand-400 font-bold shadow-glow transition-all group-hover:scale-105">#</div>
+                    <div>
+                        <h1 id="current-context-name" class="font-display font-bold text-xl text-white tracking-tight">Général</h1>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                            <p id="current-context-desc" class="text-xs text-brand-300/60 font-medium">Salon public synchronisé</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <button onclick="openSearch()" class="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all border border-white/5">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2.5"/></svg>
+                    </button>
+                    <!-- Statistics Toggle (Mobile/Desktop) -->
+                    <button id="toggle-dashboard" onclick="toggleDashboard()" class="xl:hidden flex items-center gap-2 px-4 h-10 rounded-xl bg-brand-500 text-white font-bold text-sm shadow-glow transition-all active:scale-95 leading-none">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M13 7h8m0 0V3m0 4l-7 7-4-4-6 6" stroke-width="2.5"/></svg>
+                        Stats
+                    </button>
+                    <button id="context-action-btn" class="hidden px-5 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-bold text-xs transition-all uppercase tracking-wider">Supprimer</button>
+                </div>
+            </header>
+
+            <!-- Messages Area -->
+            <div id="messages-container" class="flex-1 overflow-y-auto px-8 py-10 flex flex-col gap-6 custom-scroll">
+                {% if history %}
+                    {% for msg in history %}
+                    <div class="flex {{ 'justify-end' if msg.sender == current_user else 'justify-start' }} group animate-slide-up">
+                        <div class="flex items-start gap-3 max-w-[75%]">
+                            {% if msg.sender != current_user %}
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm avatar-shadow shadow-inner shrink-0" 
+                                style="background: {{ msg.sender | colorfor }}">
+                                {{ msg.sender[0].upper() }}
+                            </div>
+                            {% endif %}
+                            <div class="flex flex-col {{ 'items-end' if msg.sender == current_user else 'items-start' }}">
+                                <div class="flex items-center gap-2 mb-1 px-1">
+                                    <span class="text-[11px] font-bold text-white/40">{{ msg.sender }}</span>
+                                    <span class="text-[10px] text-white/20 font-medium">{{ msg.timestamp }}</span>
+                                </div>
+                                <div class="px-5 py-3.5 rounded-[1.25rem] shadow-bubble border border-white/5 leading-relaxed text-[14.5px]
+                                    {{ 'bg-brand-500 text-white rounded-tr-none border-brand-400/20' if msg.sender == current_user else 'bg-white/5 text-white/90 rounded-tl-none' }}">
+                                    {{ msg.content }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="flex-1 flex flex-col items-center justify-center opacity-20 py-20">
+                        <svg class="w-20 h-20 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" stroke-width="1.5"/></svg>
+                        <p class="font-display font-medium text-lg">Aucun message pour le moment</p>
+                    </div>
+                {% endif %}
+                <div id="scroll-anchor" class="h-4"></div>
+            </div>
+
+            <!-- Enhanced Typing Indicator -->
+            <div id="typing-indicator" class="px-10 py-2 h-8 hidden flex items-center gap-2">
+                <div class="flex gap-1">
+                    <div class="typing-dot" style="animation-delay: 0s"></div>
+                    <div class="typing-dot" style="animation-delay: 0.2s"></div>
+                    <div class="typing-dot" style="animation-delay: 0.4s"></div>
+                </div>
+                <span id="typing-text" class="text-[11px] font-bold text-brand-400/80 uppercase tracking-widest italic">Pseudo rédige...</span>
+            </div>
+
+            <!-- Message Input -->
+            <div class="p-8 pt-2 bg-white/[0.01]">
+                <div class="glass-panel rounded-3xl p-2 border border-white/10 shadow-glass flex items-end gap-3 transition-all focus-within:border-brand-500/40 focus-within:shadow-glow">
+                    <textarea id="message-input" rows="1" placeholder="Rédigez votre message ici..."
+                        class="bg-transparent w-full rounded-2xl px-5 py-4 text-[15px] text-white placeholder-white/20 resize-none outline-none max-h-40 min-h-[56px] leading-relaxed"></textarea>
+                    
+                    <div class="flex items-center gap-2 mb-2 mr-2">
+                         <button id="send-btn" class="w-12 h-12 rounded-2xl bg-brand-500 hover:bg-brand-400 text-white flex items-center justify-center shadow-glow transition-all active:scale-90 border border-brand-400/30">
+                            <svg class="w-6 h-6 transform translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- DASHBOARD RIGHT: ANALYTICS (NoSQL INSIGHTS) -->
+        <aside id="right-dashboard" class="glass-panel rounded-[2rem] w-[360px] hidden xl:flex flex-col shadow-premium border-white/5 overflow-hidden transition-all">
+            <div class="p-8 pb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-display font-bold text-lg text-white">Insights <span class="text-accent">NoSQL</span></h3>
+                    <div class="px-3 py-1 bg-brand-500/10 border border-brand-500/20 rounded-full text-[9px] text-brand-400 font-bold uppercase tracking-widest">Live Engine</div>
+                </div>
+                <p class="text-xs text-white/30 font-medium leading-relaxed">Pipelines d'agrégation MongoDB en temps réel.</p>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-6 py-6 space-y-8 custom-scroll">
+                
+                <!-- TOP SENDERS CARD -->
+                <section>
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-1.5 h-4 bg-brand-500 rounded-full"></div>
+                        <h4 class="text-[11px] font-bold text-white/40 uppercase tracking-widest">Top Expéditeurs</h4>
+                    </div>
+                    <div id="stats-top-senders" class="space-y-3">
+                        <!-- Dynamic items -->
+                    </div>
+                </section>
+
+                <!-- MOST SOLICITED -->
+                <section>
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-1.5 h-4 bg-emerald-500 rounded-full"></div>
+                        <h4 class="text-[11px] font-bold text-white/40 uppercase tracking-widest">Plus Sollicités (MP)</h4>
+                    </div>
+                    <div id="stats-most-solicited" class="space-y-3">
+                    </div>
+                </section>
+
+                <!-- GLOBAL COUNTER -->
+                <section class="glass-card rounded-3xl p-6 text-center shadow-inner mt-4 border-brand-500/10">
+                    <p class="text-[10px] font-bold text-brand-400/60 uppercase tracking-widest mb-1">Messages Traités</p>
+                    <div id="stats-total-messages" class="text-4xl font-display font-bold text-white tabular-nums tracking-tight">--</div>
+                    <div class="mt-4 flex justify-center">
+                        <button onclick="socket.emit('get_stats')" class="group flex items-center gap-2 text-[10px] font-bold text-white/20 hover:text-brand-400 transition-colors uppercase tracking-widest">
+                            <svg class="w-3.5 h-3.5 group-active:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-width="2.5"/></svg>
+                            Refresh
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- LOGIN MODAL -->
+    <div id="login-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-surface/95 backdrop-blur-3xl transition-all">
+        <div class="glass-panel p-12 w-full max-w-md rounded-[3rem] border border-white/10 shadow-premium text-center animate-slide-up">
+            <div class="w-24 h-24 bg-brand-500 rounded-3xl mx-auto mb-10 flex items-center justify-center shadow-glow ring-8 ring-brand-500/5">
+                <svg class="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <h2 class="text-4xl font-display font-bold text-white mb-4 tracking-tight">Access Control</h2>
+            <p class="text-white/40 text-sm mb-10 font-medium">NoSQL Engine - Identity Required.</p>
+            
+            <div class="space-y-4">
+                <input id="username-input" type="text" placeholder="Utilisateur" maxlength="20"
+                    class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white text-center text-lg font-bold placeholder-white/10 focus:ring-4 focus:ring-brand-500/20 transition-all outline-none">
+                <input id="password-input" type="password" placeholder="Passkey" 
+                    class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white text-center text-lg font-bold placeholder-white/10 focus:ring-4 focus:ring-brand-500/20 transition-all outline-none">
+            </div>
+
+            <p id="login-error" class="text-red-400 text-sm font-bold mt-6 hidden px-4 py-2 bg-red-400/10 rounded-xl"></p>
+            
+            <button id="join-btn" class="w-full bg-brand-500 hover:bg-brand-400 mt-10 py-5 rounded-2xl text-white font-bold text-xl shadow-glow transition-all active:scale-95 border border-brand-400/20">
+                Authenticate
+            </button>
+        </div>
+    </div>
+
+    <!-- SEARCH MODAL -->
+    <div id="search-modal" class="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-surface/90 backdrop-blur-xl hidden">
+        <div class="glass-panel p-10 w-full max-w-4xl h-[80vh] rounded-[3rem] border border-white/10 shadow-premium flex flex-col relative">
+            <div class="absolute top-8 right-8">
+                <button onclick="document.getElementById('search-modal').classList.add('hidden')" class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center hover:bg-red-500/10 hover:text-red-400 transition-all">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg>
+                </button>
+            </div>
+            
+            <h3 class="font-display font-bold text-3xl text-white mb-2">Recherche <span class="text-accent">NoSQL</span></h3>
+            <p class="text-white/30 text-sm mb-8 font-medium">Historique complet via MongoDB.</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="space-y-4">
+                    <label class="text-[10px] font-bold text-brand-400 uppercase tracking-widest px-1">Keywords</label>
+                    <div class="flex gap-2">
+                        <input id="search-keyword-input" type="text" placeholder="Ex: urgent, dev..." 
+                            class="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:ring-4 focus:ring-brand-500/10">
+                        <button onclick="searchByKeyword()" class="px-8 bg-brand-500 rounded-2xl font-bold text-white shadow-glow">Go</button>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <label class="text-[10px] font-bold text-accent uppercase tracking-widest px-1">Plage Horaire</label>
+                    <div class="flex gap-2 items-center">
+                        <input id="search-time-start" type="text" placeholder="HH:MM" class="w-24 bg-white/5 border border-white/10 rounded-2xl py-4 text-center font-bold text-white outline-none">
+                        <span class="text-white/20 font-bold">➔</span>
+                        <input id="search-time-end" type="text" placeholder="HH:MM" class="w-24 bg-white/5 border border-white/10 rounded-2xl py-4 text-center font-bold text-white outline-none">
+                        <button onclick="searchByTimeRange()" class="flex-1 bg-brand-500 rounded-2xl font-bold text-white shadow-glow">Filtrer</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="search-results-container" class="flex-1 bg-black/40 rounded-[2rem] border border-white/5 p-8 overflow-y-auto custom-scroll">
+                <div id="search-messages-results" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-10 right-10 z-[200] glass-panel px-8 py-5 rounded-[1.5rem] border border-white/10 shadow-premium flex items-center gap-4 transform translate-y-32 opacity-0 transition-all duration-500">
+        <div id="toast-icon" class="w-8 h-8 rounded-lg flex items-center justify-center"></div>
+        <p id="toast-msg" class="text-sm font-bold text-white tracking-wide"></p>
+    </div>
+
+    <!-- ADD CONTACT MODAL -->
+    <div id="add-contact-modal" class="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-surface/80 backdrop-blur-md hidden" onclick="if(event.target === this) this.classList.add('hidden')">
+        <div class="glass-panel p-10 w-full max-w-sm rounded-[2.5rem] border border-white/10 shadow-premium relative">
+            <h3 class="font-display font-bold text-2xl text-white mb-2">Nouveau Contact</h3>
+            <div class="relative w-full mb-8 mt-6">
+                <input id="contact-input" type="text" placeholder="Pseudo..." oninput="searchUsers(this.value, 'contact-suggestions')" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:ring-4 focus:ring-brand-500/20">
+                <ul id="contact-suggestions" class="absolute z-10 w-full mt-2 bg-surface border border-white/10 rounded-xl shadow-premium max-h-40 overflow-y-auto hidden"></ul>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="document.getElementById('add-contact-modal').classList.add('hidden')" class="flex-1 py-4 rounded-xl bg-white/5 text-white/40 font-bold">Annuler</button>
+                <button id="add-contact-btn" class="flex-1 py-4 rounded-xl bg-brand-500 text-white font-bold shadow-glow">Ajouter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CREATE GROUP MODAL -->
+    <div id="create-group-modal" class="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-surface/80 backdrop-blur-md hidden" onclick="if(event.target === this) this.classList.add('hidden')">
+        <div class="glass-panel p-10 w-full max-w-md rounded-[2.5rem] border border-white/10 shadow-premium">
+            <h3 class="font-display font-bold text-2xl text-white mb-2">Nouveau Groupe</h3>
+            <input id="group-name-input" type="text" placeholder="Nom du canal" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white mb-4 mt-6 outline-none focus:ring-4 focus:ring-brand-500/20">
+            <div class="relative w-full mb-8">
+                <input id="group-members-input" type="text" placeholder="Membres (alice, bob...)" oninput="searchUsers(this.value, 'group-suggestions')" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:ring-4 focus:ring-brand-500/20">
+                <ul id="group-suggestions" class="absolute z-10 w-full mt-2 bg-surface border border-white/10 rounded-xl shadow-premium max-h-40 overflow-y-auto hidden"></ul>
+            </div>
+            <div class="flex gap-4">
+                 <button onclick="document.getElementById('create-group-modal').classList.add('hidden')" class="flex-1 py-4 rounded-xl bg-white/5 text-white/40 font-bold">Annuler</button>
+                <button id="create-group-btn" class="flex-1 py-4 rounded-xl bg-brand-500 text-white font-bold shadow-glow">Créer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io({ autoConnect: false });
+        let currentUser = "";
+        let activeContext = { type: 'room', id: 'Général' };
+
+        function getColor(s) {
+            if(!s) return "#4B79E4";
+            let hash = 0;
+            for (let i = 0; i < s.length; i++) hash = s.charCodeAt(i) + ((hash << 5) - hash);
+            return `hsl(${Math.abs(hash) % 360}, 60%, 55%)`;
+        }
+
+        function showToast(msg, success = true) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msgEl = document.getElementById('toast-msg');
+            icon.innerHTML = success ? '<svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M5 13l4 4L19 7" stroke-width="4"/></svg>' : '<svg class="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-width="4"/></svg>';
+            icon.className = `w-8 h-8 rounded-lg flex items-center justify-center ${success ? 'bg-emerald-500/20' : 'bg-red-500/20'}`;
+            msgEl.innerText = msg;
+            toast.classList.remove('translate-y-32', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-32', 'opacity-0'), 4000);
+        }
+
+        function toggleDashboard() {
+            const dash = document.getElementById('right-dashboard');
+            dash.classList.toggle('hidden');
+            dash.classList.toggle('xl:flex');
+        }
+
+        function switchRoom(roomId) {
+            activeContext = { type: 'room', id: roomId };
+            document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('bg-white/10', 'border-brand-500'));
+            const listItem = document.getElementById(`conv-room-${roomId}`);
+            if (listItem) listItem.classList.add('bg-white/10', 'border-brand-500');
+            
+            document.getElementById('header-icon').innerText = '#';
+            document.getElementById('current-context-name').innerText = roomId;
+            document.getElementById('messages-container').innerHTML = '<div id="scroll-anchor" class="h-4"></div>';
+            socket.emit('join_room', { username: currentUser, room: roomId });
+        }
+
+        function openMP(peerName) {
+            activeContext = { type: 'pm', id: peerName };
+            document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('bg-white/10', 'border-brand-500'));
+            const listItem = document.getElementById(`conv-pm-${peerName}`);
+            if (listItem) listItem.classList.add('bg-white/10', 'border-brand-500');
+            
+            document.getElementById('header-icon').innerText = '@';
+            document.getElementById('header-icon').style.background = getColor(peerName);
+            document.getElementById('current-context-name').innerText = peerName;
+            document.getElementById('messages-container').innerHTML = '<div id="scroll-anchor" class="h-4"></div>';
+            const roomId = [currentUser, peerName].sort().join(':');
+            socket.emit('join_room', { username: currentUser, room: `pm:${roomId}` });
+        }
+
+        function appendMsg(data) {
+            const container = document.getElementById('messages-container');
+            const anchor = document.getElementById('scroll-anchor');
+            const isOwn = data.username === currentUser;
+            const div = document.createElement('div');
+            div.className = `flex ${isOwn ? 'justify-end' : 'justify-start'} animate-slide-up mb-6 group`;
+            div.innerHTML = `
+                <div class="flex items-start gap-3 max-w-[75%]">
+                    ${!isOwn ? `<div class="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm avatar-shadow shrink-0" style="background:${getColor(data.username)}">${data.username[0].toUpperCase()}</div>` : ''}
+                    <div class="flex flex-col ${isOwn ? 'items-end' : 'items-start'}">
+                        <div class="flex items-center gap-2 mb-1 px-1">
+                            <span class="text-[11px] font-bold text-white/40">${data.username}</span>
+                            <span class="text-[10px] text-white/20 font-medium">${data.time}</span>
+                        </div>
+                        <div class="px-5 py-3.5 rounded-[1.25rem] shadow-bubble border border-white/5 leading-relaxed text-[14.5px]
+                            ${isOwn ? 'bg-brand-500 text-white rounded-tr-none border-brand-400/20' : 'bg-white/5 text-white/90 rounded-tl-none'}">
+                            ${data.message}
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertBefore(div, anchor);
+            anchor.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        socket.on('login_result', (data) => {
+            if (data.success) {
+                currentUser = document.getElementById('username-input').value.trim();
+                document.getElementById('my-username-display').innerText = currentUser;
+                document.getElementById('my-avatar-display').innerText = currentUser[0].toUpperCase();
+                document.getElementById('my-avatar-display').style.background = getColor(currentUser);
+                document.getElementById('login-modal').classList.add('hidden');
+                switchRoom('Général');
+                socket.emit('get_stats');
+                showToast(data.message);
+            } else {
+                const err = document.getElementById('login-error');
+                err.innerText = data.message;
+                err.classList.remove('hidden');
+            }
+        });
+
+        socket.on('conversations_data', (data) => {
+            const list = document.getElementById('conversations-list');
+            list.innerHTML = "";
+            data.groups.forEach(g => {
+                const li = document.createElement('li');
+                li.id = `conv-room-${g}`;
+                li.onclick = () => switchRoom(g);
+                li.className = `conv-item flex items-center gap-3 p-3 rounded-2xl cursor-pointer hover:bg-white/5 transition-all text-sm group ${activeContext.id === g ? 'bg-white/10' : ''}`;
+                li.innerHTML = `<div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-bold text-white/40 group-hover:bg-brand-500 group-hover:text-white transition-all">#</div><span class="font-bold text-white/80 group-hover:text-white">${g}</span>`;
+                list.appendChild(li);
+            });
+            data.contacts.forEach(c => {
+                const li = document.createElement('li');
+                li.id = `conv-pm-${c}`;
+                li.onclick = () => openMP(c);
+                li.className = `conv-item flex items-center gap-3 p-3 rounded-2xl cursor-pointer hover:bg-white/5 transition-all text-sm group ${activeContext.id === c ? 'bg-white/10' : ''}`;
+                li.innerHTML = `<div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-inner" style="background:${getColor(c)}">${c[0].toUpperCase()}</div><span class="font-bold text-white/80 group-hover:text-white">${c}</span>`;
+                list.appendChild(li);
+            });
+        });
+
+        socket.on('new_msg', (data) => {
+            const currentRoomId = activeContext.type === 'room' ? activeContext.id : `pm:${[currentUser, activeContext.id].sort().join(':')}`;
+            if (data.room === currentRoomId) {
+                appendMsg(data);
+                socket.emit('get_stats');
+            } else {
+                showToast(`Message de ${data.username}`);
+            }
+        });
+
+        socket.on('stats_data', (data) => {
+            document.getElementById('stats-total-messages').innerText = data.total_messages;
+            const senders = document.getElementById('stats-top-senders');
+            senders.innerHTML = "";
+            const maxCount = Math.max(...data.top_senders.map(s => s.count), 1);
+            data.top_senders.forEach((s, idx) => {
+                const width = (s.count / maxCount) * 100;
+                senders.innerHTML += `<div class="space-y-1.5 animate-slide-up" style="animation-delay: ${idx * 0.1}s">
+                    <div class="flex items-center justify-between text-[11px] font-bold"><span class="text-white">${s._id}</span><span class="text-white/40">${s.count} msgs</span></div>
+                    <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden"><div class="h-full bg-brand-500 shadow-glow transition-all duration-1000" style="width: ${width}%"></div></div></div>`;
+            });
+            const solicited = document.getElementById('stats-most-solicited');
+            solicited.innerHTML = "";
+            data.most_solicited.forEach((s, idx) => {
+                solicited.innerHTML += `<div class="flex items-center justify-between p-3 bg-white/[0.03] rounded-xl border border-white/5 animate-slide-up" style="animation-delay: ${idx * 0.1}s">
+                    <div class="flex items-center gap-3"><span class="text-[10px] font-bold text-accent">#${idx+1}</span><span class="text-xs font-bold text-white">${s._id}</span></div>
+                    <span class="text-[10px] font-bold text-white/20">${s.count} reçus</span></div>`;
+            });
+        });
+
+        socket.on('search_messages_results', (data) => {
+            const res = document.getElementById('search-messages-results');
+            const kw = document.getElementById('search-keyword-input').value.trim();
+            res.innerHTML = "";
+            if (data.results.length === 0) {
+                res.innerHTML = '<p class="text-center py-10 text-white/20 text-xs font-bold uppercase">Aucun résultat NoSQL</p>';
+                return;
+            }
+            data.results.forEach(msg => {
+                let content = msg.content;
+                if (kw) {
+                    const regex = new RegExp(`(${kw})`, 'gi');
+                    content = content.replace(regex, '<span class="search-highlight">$1</span>');
+                }
+                res.innerHTML += `<div class="glass-card p-4 rounded-2xl animate-fade-in shadow-inner">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2"><span class="text-[10px] font-bold text-brand-400 capitalize">${msg.sender}</span><span class="text-[9px] text-white/20 font-bold">dans ${msg.room}</span></div>
+                        <span class="text-[9px] text-white/30 font-bold">${msg.timestamp}</span></div>
+                    <p class="text-sm text-white/80 leading-relaxed">${content}</p></div>`;
+            });
+        });
+
+        // Events
+        document.getElementById('join-btn').onclick = () => {
+            const u = document.getElementById('username-input').value.trim();
+            const p = document.getElementById('password-input').value.trim();
+            if(!u || !p) return;
+            socket.connect();
+            socket.emit('connect_user', { username: u, password: p });
+        };
+
+        const input = document.getElementById('message-input');
+        document.getElementById('send-btn').onclick = () => {
+             const msg = input.value.trim();
+             if(!msg) return;
+             const isPM = activeContext.type === 'pm';
+             socket.emit('send_message', {
+                username: currentUser,
+                message: msg,
+                room: isPM ? `pm:${[currentUser, activeContext.id].sort().join(':')}` : activeContext.id,
+                is_private: isPM,
+                target: isPM ? activeContext.id : null
+             });
+             input.value = "";
+             socket.emit('stop_typing', { username: currentUser, room: activeContext.id });
+        };
+
+        function openSearch() { document.getElementById('search-modal').classList.remove('hidden'); }
+        function searchByKeyword() { socket.emit('search_messages', { keyword: document.getElementById('search-keyword-input').value.trim() }); }
+        function searchByTimeRange() { socket.emit('search_messages', { time_range: { start: document.getElementById('search-time-start').value, end: document.getElementById('search-time-end').value } }); }
+
+        // Typing logic
+        let typingTimeout;
+        input.oninput = () => {
+            const room = activeContext.type === 'room' ? activeContext.id : `pm:${[currentUser, activeContext.id].sort().join(':')}`;
+            socket.emit('typing', { username: currentUser, room: room });
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => socket.emit('stop_typing', { username: currentUser, room: room }), 2000);
+        };
+        socket.on('display_typing', (data) => {
+            const currentRoomId = activeContext.type === 'room' ? activeContext.id : `pm:${[currentUser, activeContext.id].sort().join(':')}`;
+            if (data.room === currentRoomId) {
+                document.getElementById('typing-indicator').classList.remove('hidden');
+                document.getElementById('typing-text').innerText = `${data.username} rédige...`;
+            }
+        });
+        socket.on('hide_typing', () => document.getElementById('typing-indicator').classList.add('hidden'));
+
+    </script>
+</body>
+</html>

@@ -1,2 +1,5 @@
 pymongo
 redis
+flask
+flask-socketio
+eventlet

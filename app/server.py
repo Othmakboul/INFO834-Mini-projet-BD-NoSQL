@@ -28,6 +28,19 @@ def diffuser_message(message, client_expediteur=None):
                 with lock:
                     clients_connectes.pop(client, None)
 
+def ecouter_redis_pour_tcp():
+    """Écoute les messages venant du Web via Redis et les affiche au Terminal."""
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe('chat_room:Général')
+    for message in pubsub.listen():
+        if message['type'] == 'message':
+            data = message['data'].decode('utf-8')
+            # On n'affiche que les messages venant du WEB
+            if data.startswith('[WEB]'):
+                msg_formate = f"\n{data}\n> ".encode('utf-8')
+                diffuser_message(msg_formate)
+                print(f"\n{data}")
+
 
 def envoyer_message_prive(message, pseudo_destinataire, client_expediteur):
     """Envoie un message privé à un utilisateur spécifique."""
@@ -85,7 +98,7 @@ def gerer_client(client_socket, adresse):
             # --- Commande : /stats ---
             elif texte == "/stats":
                 try:
-                    lines = mongo_manager.get_full_stats()
+                    lines = mongo_manager.get_full_stats_as_lines()
                     reponse = "\n".join(lines)
                 except Exception as e:
                     reponse = f"Erreur MongoDB : {e}"
@@ -142,12 +155,14 @@ def gerer_client(client_socket, adresse):
                 else:
                     client_socket.send("Usage: /msg <pseudo> <message>".encode('utf-8'))
 
-            # --- Message public ---
-            else:
                 try:
                     mongo_manager.save_message(sender=pseudo, receiver="Tous", content=texte)
+                    # --- SYNC AVEC LE WEB via REDIS ---
+                    # Format: [TCP] Pseudo: Message
+                    redis_client.publish('chat_room:Général', f"[TCP] {pseudo}: {texte}")
                 except Exception as e:
-                    print(f"[WARN] MongoDB save_message échoué: {e}")
+                    print(f"[WARN] Erreur liaison MongoDB/Redis: {e}")
+                
                 message_formate = f"{pseudo}: {texte}".encode('utf-8')
                 print(message_formate.decode('utf-8'))
                 diffuser_message(message_formate, client_socket)
@@ -166,6 +181,10 @@ def gerer_client(client_socket, adresse):
 
 
 def demarrer_serveur():
+    # Lancement du thread pour écouter le Web via Redis
+    thread_redis = threading.Thread(target=ecouter_redis_pour_tcp, daemon=True)
+    thread_redis.start()
+
     serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     serveur.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serveur.bind((HOST, PORT))
