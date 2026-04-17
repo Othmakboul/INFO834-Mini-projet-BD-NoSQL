@@ -1,1604 +1,2239 @@
 <!DOCTYPE html>
-<html lang="fr" class="h-full">
+<html lang="fr">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nexus — WhatsApp Edition</title>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.js"></script>
-<style>
-:root {
-  --wa-green:     #25D366;
-  --wa-dark-green:#075E54;
-  --wa-teal:      #128C7E;
-  --wa-bg:        #f0f2f5;
-  --wa-chat-bg:   #efe7dd;
-  --wa-bubble-in: #ffffff;
-  --wa-bubble-out:#dcf8c6;
-  --wa-header:    #ededed;
-  
-  --bg:        var(--wa-bg);
-  --surface:   #ffffff;
-  --card:      #ffffff;
-  --card2:     #f0f2f5;
-  --border:    #e0e0e0;
-  --border2:   #f2f2f2;
-  --primary:   var(--wa-teal);
-  --primary-d: var(--wa-dark-green);
-  --primary-g: rgba(18, 140, 126, 0.1);
-  --cyan:      #34b7f1;
-  --green:     var(--wa-green);
-  --red:       #ea0038;
-  --text:      #111b21;
-  --muted:     #667781;
-  --dim:       #8696a0;
-  --sidebar-w: 400px;
-  --panel-w:   300px;
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.js"></script>
+    <style>
+        :root {
+            --h1: #075E54;
+            --h2: #128C7E;
+            --green: #25D366;
+            --teal: #00A884;
+            --bub-out: #DCF8C6;
+            --bub-in: #fff;
+            --chat-bg: #ECE5DD;
+            --panel: #F0F2F5;
+            --border: #E9EDEF;
+            --text: #111B21;
+            --muted: #667781;
+            --icon: #54656F;
+            --hover: #F5F6F6;
+            --active: #EFEAE2;
+            --unread: #25D366;
+            --send: #00A884;
+        }
 
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
-.hidden { display: none !important; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
 
-body {
-  font-family:'Inter',sans-serif;
-  background:var(--bg);
-  color:var(--text);
-}
+        html,
+        body {
+            height: 100%;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #fff;
+            color: var(--text);
+            overflow: hidden
+        }
 
-/* ─── SCROLLBAR ─── */
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.1);border-radius:99px}
-::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,0.2)}
+        ::-webkit-scrollbar {
+            width: 6px
+        }
 
-/* ─── REMOVED ORBS ─── */
-.orb { display: none; }
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px
+        }
 
-/* ─── FLAT DESIGN ─── */
-.glass{
-  background:var(--surface);
-  border:none;
-}
-.border-r { border-right: 1px solid var(--border); }
-.border-l { border-left: 1px solid var(--border); }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #aaa
+        }
 
-/* ─── LAYOUT ─── */
-.app{
-  display:flex;
-  height:100vh;
-  background:var(--bg);
-  max-width: 1600px;
-  margin: 0 auto;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.05);
-}
-.sidebar { width: var(--sidebar-w); flex-shrink: 0; background: #fff; border-right: 1px solid var(--border); }
-.chat-area { flex: 1; display: flex; flex-direction: column; background: #efe7dd; position: relative; }
-.right-panel { width: var(--panel-w); flex-shrink: 0; background: #fff; border-left: 1px solid var(--border); }
+        button {
+            cursor: pointer;
+            border: none;
+            outline: none;
+            background: none;
+            font-family: inherit
+        }
 
-@media(max-width:1400px){.right-panel{display:none!important}}
-@media(max-width:900px){.sidebar{width:100%!important;}.chat-area,.right-panel{display:none!important}}
+        input,
+        textarea {
+            font-family: inherit;
+            outline: none
+        }
 
-/* ─── SIDEBAR ─── */
-.sidebar{
-  display:flex;flex-direction:column;
-  border-radius:20px;overflow:hidden;
-}
+        /* ── LOGIN ── */
+        #login-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: linear-gradient(160deg, #054d43 0%, #075E54 50%, #0d7a6e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-.sidebar-logo{
-  padding:14px 16px;
-  display:flex;align-items:center;justify-content:space-between;
-  background:#ededed;
-  border-bottom:1px solid var(--border);
-}
-.logo-icon{
-  width:40px;height:40px;border-radius:50%;
-  background:var(--wa-green);
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;
-}
-.logo-name{font-weight:700;font-size:16px;color:#3b4a54}
-.logo-badge{display:none}
+        .login-card {
+            background: #fff;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 28px 64px rgba(0, 0, 0, .28);
+            overflow: hidden
+        }
 
-.sidebar-search{padding:10px 14px}
-.sidebar-search input{
-  width:100%;background:var(--card2);border:1px solid var(--border);
-  border-radius:10px;padding:8px 12px 8px 36px;
-  font-size:13px;color:var(--text);outline:none;transition:border-color .2s;
-}
-.sidebar-search input::placeholder{color:var(--dim)}
-.sidebar-search input:focus{border-color:rgba(124,92,252,0.5)}
-.sidebar-search{position:relative}
-.sidebar-search .s-icon{position:absolute;left:26px;top:50%;transform:translateY(-50%);opacity:.3;pointer-events:none}
+        .login-top {
+            background: linear-gradient(135deg, var(--h1), var(--h2));
+            padding: 36px 32px 28px;
+            text-align: center
+        }
 
-.sidebar-sections{flex:1;overflow-y:auto;padding:6px 10px 10px}
-.section-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:8px 8px 4px;cursor:pointer;user-select:none;
-}
-.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.15em;color:var(--muted)}
-.section-toggle{color:var(--dim);transition:transform .2s}
-.section-toggle.open{transform:rotate(90deg)}
-.section-list{list-style:none}
+        .login-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .2);
+            border: 3px solid rgba(255, 255, 255, .4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px
+        }
 
-.conv-item{
-  display:flex;align-items:center;gap:15px;
-  padding:12px 16px;
-  cursor:pointer;transition:background .1s;
-  border-bottom:1px solid #f2f2f2;
-}
-.conv-item:hover{background:#f5f6f6}
-.conv-item.active{background:#ebebeb}
-.conv-item.active .conv-name{color:#000;font-weight:600}
+        .login-icon svg {
+            width: 36px;
+            height: 36px;
+            fill: #fff
+        }
 
-.conv-icon{
-  width:36px;height:36px;border-radius:10px;
-  display:flex;align-items:center;justify-content:center;
-  font-weight:700;font-size:14px;flex-shrink:0;
-  background:rgba(255,255,255,0.07);color:var(--muted);
-  transition:background .2s,color .2s;
-}
-.conv-item.active .conv-icon,.conv-item:hover .conv-icon{background:var(--primary-g);color:var(--primary)}
-.conv-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+        .login-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -.3px
+        }
 
-.conv-info{flex:1;min-width:0}
-.conv-name{font-size:13px;font-weight:500;color:var(--muted);truncate;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .15s}
-.conv-preview{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+        .login-sub {
+            font-size: 13px;
+            color: rgba(255, 255, 255, .75);
+            margin-top: 4px
+        }
 
-.conv-badge{
-  min-width:18px;height:18px;padding:0 5px;
-  background:var(--primary);border-radius:99px;
-  font-size:10px;font-weight:700;color:#fff;
-  display:none;align-items:center;justify-content:center;
-}
-.conv-badge.show{display:flex}
+        .login-body {
+            padding: 28px 32px 32px
+        }
 
-.conv-online-dot{
-  width:8px;height:8px;border-radius:50%;background:var(--green);
-  box-shadow:0 0 6px var(--green);position:absolute;
-  bottom:7px;right:10px;
-}
+        .login-steps {
+            position: relative;
+            overflow: hidden;
+            min-height: 220px
+        }
 
-.sidebar-footer{
-  padding:12px;border-top:1px solid var(--border);
-}
-.user-card{
-  display:flex;align-items:center;gap:10px;
-  padding:10px;border-radius:12px;
-  background:var(--card);border:1px solid var(--border2);
-  cursor:pointer;transition:background .2s;
-}
-.user-card:hover{background:var(--card2)}
-.user-avatar-wrap{position:relative;flex-shrink:0}
-.user-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#fff}
-.online-pulse{
-  position:absolute;bottom:-2px;right:-2px;
-  width:11px;height:11px;border-radius:50%;
-  background:var(--green);border:2px solid var(--card);
-}
-.online-pulse::after{
-  content:'';position:absolute;inset:0;border-radius:50%;
-  background:var(--green);animation:pulse 2s ease-out infinite;
-}
-@keyframes pulse{0%{transform:scale(1);opacity:.8}100%{transform:scale(2.5);opacity:0}}
+        .lstep {
+            width: 100%;
+            transition: transform .32s cubic-bezier(.4, 0, .2, 1), opacity .28s
+        }
 
-.user-info{flex:1;min-width:0}
-.user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.user-status{font-size:11px;color:var(--green);font-weight:500}
-.user-actions{display:flex;gap:4px}
-.icon-btn{
-  width:30px;height:30px;border-radius:8px;border:none;
-  background:transparent;color:var(--muted);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:background .15s,color .15s;
-}
-.icon-btn:hover{background:rgba(255,255,255,0.08);color:var(--text)}
-.icon-btn.d/* ─── CHAT AREA ─── */
-.chat-area{display:flex;flex-direction:column;overflow:hidden;background:#efe7dd}
+        .lstep.left {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: translateX(-110%);
+            opacity: 0
+        }
 
-.chat-header{
-  height:59px;padding:0 16px;
-  display:flex;align-items:center;justify-content:space-between;
-  background:#ededed;border-bottom:1px solid rgba(0,0,0,0.08);flex-shrink:0;
-}
-.chat-header-left{display:flex;align-items:center;gap:15px;cursor:pointer}
-.chat-header-icon{
-  width:40px;height:40px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-weight:700;font-size:18px;
-  background:#dfe5e7;color:#54656f;
-  flex-shrink:0;
-}
-.chat-header-name{font-weight:600;font-size:16px;color:#111b21}
-.chat-header-desc{font-size:13px;color:#667781;margin-top:1px}
-.chat-header-actions{display:flex;align-items:center;gap:15px}
-.hdr-btn{
-  background:none;border:none;color:#54656f;cursor:pointer;
-  padding:8px;border-radius:50%;transition:background .2s;
-}
-.hdr-btn:hover{background:rgba(0,0,0,0.05)}7,0.2);display:none}
-.hdr-btn-danger:hover{background:rgba(255,71,87,0.2)}
+        .lstep.right {
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform: translateX(110%);
+            opacity: 0
+        }
 
-/* ─── MESSAGES ─── */
-.messages-wrap{flex:1;overflow-y:auto;padding:20px 24px;position:relative}
-.messages-wrap::-webkit-scrollbar{width:4px}
+        .fw {
+            margin-bottom: 18px
+        }
 
-.date-sep{
-  display:flex;align-items:center;gap:12px;margin:20px 0;
-}
-.date-sep-line{flex:1;height:1px;background:var(--border)}
-.date-sep-label{
-  font-size:11px;font-weight:600;color:var(--muted);
-  background:var(--card);border:1px solid var(--border);
-  padding:3px 10px;border-radius:99px;white-space:nowrap;
-}
+        .fw label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: var(--muted);
+            margin-bottom: 7px
+        }
 
-.msg-group{margin-bottom:2px;position:relative}
-.msg-group.with-header{margin-bottom:2px;margin-top:16px}
+        .ii {
+            position: relative
+        }
 
-.msg-header{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;padding-left:48px}
-.msg-header-own{justify-content:flex-end;padding-left:0;padding-right:0}
-.msg-author{font-size:13px;font-weight:600;color:var(--text)}
-.msg-time{font-size:11px;color:var(--dim);font-weight:400}
+        .ii svg {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            pointer-events: none
+        }
 
-.msg-row{display:flex;align-items:flex-end;gap:10px}
-.msg-row-own{flex-direction:row-reverse}
+        .ii input {
+            width: 100%;
+            padding: 13px 13px 13px 42px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 15px;
+            color: var(--text);
+            transition: border-color .2s, box-shadow .2s;
+            background: #fff
+        }
 
-.msg-avatar{
-  width:36px;height:36px;border-radius:10px;
-  display:flex;align-items:center;justify-content:center;
-  font-weight:700;font-size:13px;color:#fff;flex-shrink:0;
-  align-self:flex-end;
-}
-.msg-avatar-spacer{width:36px;flex-shrink:0}
+        .ii input:focus {
+            border-color: var(--teal);
+            box-shadow: 0 0 0 3px rgba(0, 168, 132, .1)
+        }
 
-.msg-bubble{
-  max-width:65%;padding:6px 10px 8px;
-  border-radius:7.5px;font-size:14.2px;line-height:1.4;
-  position:relative;word-break:break-word;
-  box-shadow: 0 1px 0.5px rgba(11,20,26,0.13);
-}
-.msg-bubble-other{
-  background:var(--wa-bubble-in);color:#111b21;
-  border-top-left-radius:0;
-}
-.msg-bubble-own{
-  background:var(--wa-bubble-out);
-  color:#111b21;
-  border-top-right-radius:0;
-}
-/* Bubble tails */
-.msg-bubble-other::before {
-    content: ""; position: absolute; top: 0; left: -8px; 
-    width: 0; height: 0; border: 8px solid transparent; 
-    border-top-color: var(--wa-bubble-in); border-right: 0;
-}
-.msg-bubble-own::after {
-    content: ""; position: absolute; top: 0; right: -8px; 
-    width: 0; height: 0; border: 8px solid transparent; 
-    border-top-color: var(--wa-bubble-out); border-left: 0;
-}
-.msg-bubble-cont-other::before, .msg-bubble-cont-own::after { display: none; }
-.msg-bubble-cont-other { border-top-left-radius: 7.5px; }
-.msg-bubble-cont-own { border-top-right-radius: 7.5px; }
+        .toggle-pw {
+            position: absolute;
+            right: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+            padding: 4px;
+            transition: color .15s
+        }
 
-/* Reactions on hover */
-.msg-actions{
-  position:absolute;top:-28px;right:0;
-  display:none;align-items:center;gap:4px;
-  background:var(--card2);border:1px solid var(--border);
-  border-radius:20px;padding:3px 6px;z-index:10;
-  box-shadow:0 4px 20px rgba(0,0,0,0.4);
-}
-.msg-row:hover .msg-actions,.msg-row-own:hover .msg-actions{display:flex}
-.msg-react-btn{
-  width:24px;height:24px;border-radius:50%;border:none;
-  background:transparent;cursor:pointer;font-size:13px;
-  display:flex;align-items:center;justify-content:center;
-  transition:background .1s,transform .1s;
-}
-.msg-react-btn:hover{background:rgba(255,255,255,0.1);transform:scale(1.2)}
-.msg-copy-btn{
-  width:24px;height:24px;border-radius:6px;border:none;
-  background:transparent;cursor:pointer;color:var(--muted);
-  display:flex;align-items:center;justify-content:center;
-  transition:all .1s;
-}
-.msg-copy-btn:hover{background:rgba(255,255,255,0.1);color:var(--text)}
+        .toggle-pw:hover {
+            color: var(--text)
+        }
 
-/* ─── TYPING INDICATOR ─── */
-.typing-bar{
-  height:36px;padding:0 24px;
-  display:flex;align-items:center;gap:8px;
-  font-size:12px;color:var(--muted);font-weight:500;
-  opacity:0;transition:opacity .2s;
-  flex-shrink:0;
-}
-.typing-bar.show{opacity:1}
-.typing-dots{display:flex;gap:3px;align-items:center}
-.dot{
-  width:5px;height:5px;border-radius:50%;
-  background:var(--primary);
-  animation:bounce 1.4s ease-in-out infinite;
-}
-.dot:nth-child(2){animation-delay:.2s}
-.dot:nth-child(3){animation-delay:.4s}
-@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+        .btn-g {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--teal), var(--h2));
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            box-shadow: 0 4px 16px rgba(0, 168, 132, .35);
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px
+        }
 
-/* ─── INPUT ─── */
-.chat-input-wrap{
-  padding:10px 16px;background:#f0f2f5;
-  border-top:1px solid rgba(0,0,0,0.05);
-}
-.input-box{
-  display:flex;align-items:center;gap:12px;
-  background:#fff;border-radius:8px;padding:5px 12px;
-}
-.input-box textarea{
-  flex:1;background:transparent;border:none;outline:none;
-  font-size:15px;color:#111b21;line-height:1.5;max-height:120px;min-height:20px;
-  padding:10px 0;
-}
-.send-btn{
-  width:40px;height:40px;background:none;border:none;
-  color:#54656f;cursor:pointer;display:flex;align-items:center;justify-content:center;
-}
-.send-btn:hover { color: var(--wa-green); }
+        .btn-g:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 22px rgba(0, 168, 132, .45)
+        }
 
-/* ─── SCROLL TO BOTTOM ─── */
-.scroll-bottom-btn{
-  position:absolute;bottom:90px;right:32px;
-  width:38px;height:38px;border-radius:50%;border:none;
-  background:var(--card2);border:1px solid var(--border);
-  color:var(--muted);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 4px 20px rgba(0,0,0,0.4);
-  opacity:0;pointer-events:none;
-  transition:all .25s;z-index:5;
-}
-.scroll-bottom-btn.show{opacity:1;pointer-events:all}
-.scroll-bottom-btn:hover{background:var(--primary);color:#fff;border-color:transparent}
-.scroll-bottom-badge{
-  position:absolute;top:-6px;right:-6px;
-  min-width:18px;height:18px;padding:0 5px;
-  background:var(--red);border-radius:99px;
-  font-size:10px;font-weight:700;color:#fff;
-  display:none;align-items:center;justify-content:center;
-}
-.scroll-bottom-badge.show{display:flex}
+        .btn-g:active {
+            transform: none
+        }
 
-/* ─── RIGHT PANEL ─── */
-.right-panel{
-  display:flex;flex-direction:column;border-radius:20px;
-  overflow:hidden;overflow-y:auto;
-}
+        .btn-g:disabled {
+            opacity: .6;
+            pointer-events: none
+        }
 
-.panel-section{padding:18px 16px;border-bottom:1px solid var(--border)}
-.panel-section:last-child{border-bottom:none}
-.panel-title{
-  font-size:11px;font-weight:700;text-transform:uppercase;
-  letter-spacing:.15em;color:var(--muted);margin-bottom:14px;
-  display:flex;align-items:center;gap:6px;
-}
-.panel-title::before{content:'';display:inline-block;width:3px;height:12px;border-radius:2px;background:var(--primary)}
+        .btn-back {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 16px;
+            transition: color .15s
+        }
 
-/* Connection status */
-.conn-item{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:8px 10px;border-radius:10px;background:var(--card);
-  border:1px solid var(--border2);margin-bottom:6px;
-}
-.conn-name{font-size:12px;font-weight:600}
-.conn-badge{
-  font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;
-  display:flex;align-items:center;gap:4px;
-}
-.conn-badge.ok{background:rgba(0,230,118,0.1);color:var(--green)}
-.conn-badge.ok::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green)}
-.conn-badge.err{background:rgba(255,71,87,0.1);color:var(--red)}
+        .btn-back:hover {
+            color: var(--text)
+        }
 
-/* Stats bars */
-.stat-bar-row{margin-bottom:12px}
-.stat-bar-header{display:flex;justify-content:space-between;margin-bottom:5px}
-.stat-bar-name{font-size:12px;font-weight:600}
-.stat-bar-count{font-size:11px;color:var(--muted)}
-.stat-bar-track{height:5px;background:rgba(255,255,255,0.05);border-radius:99px;overflow:hidden}
-.stat-bar-fill{height:100%;border-radius:99px;width:0%;transition:width 1.2s cubic-bezier(.25,.46,.45,.94)}
+        .step2-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px
+        }
 
-.solicited-item{
-  display:flex;align-items:center;gap:10px;
-  padding:8px 10px;border-radius:10px;
-  background:var(--card);border:1px solid var(--border2);margin-bottom:6px;
-}
-.sol-rank{
-  width:22px;height:22px;border-radius:7px;
-  background:rgba(124,92,252,0.15);color:var(--primary);
-  font-size:11px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.sol-name{font-size:12px;font-weight:600;flex:1}
-.sol-count{font-size:11px;color:var(--muted)}
+        .login-hint {
+            text-align: center;
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 16px;
+            line-height: 1.6
+        }
 
-.total-card{
-  background:var(--card);border:1px solid var(--border2);
-  border-radius:12px;padding:16px;text-align:center;
-}
-.total-label{font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em;font-weight:600}
-.total-num{font-family:'Plus Jakarta Sans',sans-serif;font-size:38px;font-weight:800;letter-spacing:-2px;background:linear-gradient(135deg,var(--primary),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.refresh-btn{
-  margin-top:10px;font-size:11px;font-weight:600;
-  color:var(--muted);background:none;border:none;cursor:pointer;
-  display:flex;align-items:center;gap:4px;margin-inline:auto;
-  transition:color .15s;
-}
-.refresh-btn:hover{color:var(--primary)}
-.refresh-btn svg{width:13px;height:13px;transition:transform .5s}
-.refresh-btn:hover svg{transform:rotate(180deg)}
+        .login-hint b {
+            color: var(--teal)
+        }
 
-/* Online users in panel */
-.online-list{display:flex;flex-direction:column;gap:6px}
-.online-user-item{
-  display:flex;align-items:center;gap:8px;
-  padding:6px 8px;border-radius:8px;transition:background .15s;
-}
-.online-user-item:hover{background:rgba(255,255,255,0.04)}
-.online-user-av{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff}
-.online-user-name{font-size:12px;font-weight:500}
-.online-count-badge{
-  display:inline-block;background:rgba(0,230,118,0.1);color:var(--green);
-  font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:6px;
-}
+        .login-err {
+            background: #FFF2F2;
+            border: 1px solid #FFCDD2;
+            color: #C62828;
+            border-radius: 8px;
+            padding: 9px 13px;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 14px;
+            display: none;
+            align-items: center;
+            gap: 7px
+        }
 
-/* ─── MODALS ─── */
-.modal-overlay{
-  position:fixed;inset:0;z-index:500;
-  display:flex;align-items:center;justify-content:center;padding:16px;
-  background:rgba(6,6,15,0.85);backdrop-filter:blur(16px);
-}
-.modal-overlay.hidden{display:none}
-.modal{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:20px;padding:32px;width:100%;
-  box-shadow:0 30px 80px rgba(0,0,0,0.5);
-  animation:modalIn .25s cubic-bezier(.34,1.56,.64,1) forwards;
-}
-@keyframes modalIn{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:none}}
-.modal-title{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:20px;margin-bottom:20px;letter-spacing:-.3px}
-.modal-close{
-  position:absolute;top:16px;right:16px;
-  width:32px;height:32px;border-radius:8px;border:none;
-  background:rgba(255,255,255,0.06);color:var(--muted);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:all .15s;
-}
-.modal-close:hover{background:rgba(255,71,87,0.15);color:var(--red)}
-.field{margin-bottom:14px}
-.field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:6px}
-.field input,.field textarea{
-  width:100%;background:var(--card);border:1px solid var(--border);
-  border-radius:10px;padding:11px 14px;font-size:14px;color:var(--text);
-  outline:none;transition:border-color .2s;font-family:inherit;
-}
-.field input:focus,.field textarea:focus{border-color:rgba(124,92,252,0.5)}
-.field input::placeholder,.field textarea::placeholder{color:var(--dim)}
-.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn{
-  width:100%;padding:12px;border-radius:10px;border:none;
-  font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;
-  display:flex;align-items:center;justify-content:center;gap:6px;
-}
-.btn-primary{background:linear-gradient(135deg,var(--primary),#9a7aff);color:#fff;box-shadow:0 4px 20px var(--primary-g)}
-.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
-.btn-primary:active{transform:translateY(0)}
-.btn-ghost{background:rgba(255,255,255,0.06);color:var(--muted)}
-.btn-ghost:hover{background:rgba(255,255,255,0.1);color:var(--text)}
-.btn-sm{width:auto;padding:8px 18px;font-size:13px}
-.btn-danger{background:rgba(255,71,87,0.1);color:var(--red);border:1px solid rgba(255,71,87,0.2)}
-.btn-danger:hover{background:rgba(255,71,87,0.2)}
-.modal-footer{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+        .login-loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 14px;
+            color: var(--muted);
+            font-size: 13px
+        }
 
-/* Suggestions dropdown */
-.suggestions-list{
-  position:absolute;top:100%;left:0;right:0;z-index:600;
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:12px;margin-top:4px;
-  box-shadow:0 16px 40px rgba(0,0,0,0.4);
-  overflow:hidden;max-height:180px;overflow-y:auto;
-  display:none;
-}
-.suggestions-list.show{display:block}
-.suggestion-item{
-  padding:10px 14px;font-size:13px;cursor:pointer;
-  transition:background .1s;display:flex;align-items:center;gap:8px;
-}
-.suggestion-item:hover{background:rgba(124,92,252,0.1)}
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
 
-/* Error message */
-.error-msg{
-  background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.2);
-  color:var(--red);padding:10px 14px;border-radius:10px;
-  font-size:13px;font-weight:600;margin-bottom:14px;display:none;
-}
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2.5px solid var(--border);
+            border-top-color: var(--teal);
+            border-radius: 50%;
+            animation: spin .7s linear infinite
+        }
 
-/* ─── AUTH SCREEN ─── */
-.auth-overlay {
-    position: fixed; inset: 0; z-index: 9999;
-    background: #f0f2f5; display: flex; flex-direction: column;
-}
-.auth-top-bar { height: 220px; background: var(--wa-teal); width: 100%; }
-.auth-container {
-    margin: -120px auto 0; width: 100%; max-width: 1000px;
-    background: #fff; border-radius: 3px; box-shadow: 0 17px 50px rgba(0,0,0,0.1);
-    display: flex; height: 500px;
-}
-.auth-left { flex: 1; padding: 60px; border-right: 1px solid #f2f2f2; }
-.auth-right { flex: 1; padding: 60px; background: #fafafa; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-.auth-title { font-size: 28px; font-weight: 300; color: #41525d; margin-bottom: 40px; }
-.auth-input-group { margin-bottom: 20px; }
-.auth-input-group label { display: block; font-size: 14px; color: var(--wa-green); font-weight: 600; margin-bottom: 5px; }
-.auth-input { width: 100%; border: none; border-bottom: 2px solid #e1e9eb; padding: 10px 0; font-size: 16px; outline: none; transition: border-color .2s; }
-.auth-input:focus { border-color: var(--wa-green); }
-.auth-btn { 
-    background: var(--wa-green); color: #fff; border: none; padding: 12px 30px; 
-    border-radius: 3px; font-weight: 600; cursor: pointer; font-size: 14px; 
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 200px;
-}
-.auth-btn:hover { background: #20bd5a; }
-.auth-btn:disabled { background: #a5ebbc; cursor: not-allowed; }
+        /* ── APP ── */
+        #app {
+            display: none;
+            height: 100vh
+        }
 
-.auth-input-wrapper { position: relative; }
-.auth-eye {
-    position: absolute; right: 0; top: 10px; cursor: pointer; color: #8696a0;
-    padding: 5px; transition: color .2s;
-}
-.auth-eye:hover { color: var(--wa-green); }
+        .app-inner {
+            display: flex;
+            height: 100%
+        }
 
-.auth-remember { display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; color: #667781; cursor: pointer; }
-.auth-remember input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--wa-green); }
+        /* LEFT PANEL */
+        .lp {
+            width: 360px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            background: #fff
+        }
 
-.spinner {
-    width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; display: none;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+        .lp-hdr {
+            height: 59px;
+            background: var(--panel);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            flex-shrink: 0
+        }
 
-.shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
-@keyframes shake {
-    10%, 90% { transform: translate3d(-1px, 0, 0); }
-    20%, 80% { transform: translate3d(2px, 0, 0); }
-    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-    40%, 60% { transform: translate3d(4px, 0, 0); }
-}
+        .lp-hdr-av {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: #fff;
+            cursor: pointer
+        }
 
-/* ─── TOAST ─── */
-#toast-container{
-  position:fixed;bottom:20px;right:20px;z-index:1000;
-  display:flex;flex-direction:column;gap:8px;
-  pointer-events:none;
-}
-.toast{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:12px;padding:12px 16px;
-  display:flex;align-items:center;gap:10px;
-  box-shadow:0 8px 32px rgba(0,0,0,0.4);
-  min-width:260px;max-width:380px;
-  transform:translateX(120%);opacity:0;
-  transition:all .35s cubic-bezier(.34,1.56,.64,1);
-  pointer-events:all;
-}
-.toast.show{transform:translateX(0);opacity:1}
-.toast.hide{transform:translateX(120%);opacity:0}
-.toast-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.toast-icon.ok{background:rgba(0,230,118,0.12);color:var(--green)}
-.toast-icon.err{background:rgba(255,71,87,0.12);color:var(--red)}
-.toast-msg{font-size:13px;font-weight:600;flex:1}
-.toast-close{background:none;border:none;color:var(--dim);cursor:pointer;padding:2px;font-size:16px;display:flex}
+        .lp-hdr-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -.2px
+        }
 
-/* ─── CONTEXT MENU ─── */
-#ctx-menu{
-  position:fixed;z-index:800;
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:10px;padding:4px;
-  box-shadow:0 10px 40px rgba(0,0,0,0.5);
-  min-width:150px;display:none;
-}
-.ctx-item{
-  padding:8px 12px;border-radius:7px;font-size:13px;font-weight:500;
-  cursor:pointer;display:flex;align-items:center;gap:8px;
-  transition:background .1s;
-}
-.ctx-item:hover{background:rgba(255,255,255,0.07)}
+        .lp-hdr-icons {
+            display: flex;
+            gap: 6px
+        }
 
-/* ─── GROUP INFO MODAL ─── */
-.member-row{
-  display:flex;align-items:center;gap:8px;
-  padding:7px 8px;border-radius:9px;background:var(--card);
-  border:1px solid var(--border2);margin-bottom:6px;
-}
-.member-av{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
-.member-name{font-size:12px;font-weight:600;flex:1}
-.admin-tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:rgba(124,92,252,0.15);color:var(--primary)}
-.kick-btn{font-size:11px;font-weight:600;color:var(--red);background:rgba(255,71,87,0.08);border:none;padding:3px 8px;border-radius:6px;cursor:pointer;transition:background .15s}
-.kick-btn:hover{background:rgba(255,71,87,0.18)}
+        .ib {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--icon);
+            transition: background .15s
+        }
 
-/* Search results */
-.search-result-card{
-  background:var(--card);border:1px solid var(--border2);
-  border-radius:12px;padding:14px;margin-bottom:8px;
-}
-.search-highlight{background:rgba(124,92,252,0.25);color:var(--primary);padding:0 2px;border-radius:3px;font-weight:600}
-</style>
+        .ib:hover {
+            background: rgba(0, 0, 0, .07)
+        }
+
+        .lp-search {
+            padding: 8px 12px;
+            background: #fff;
+            flex-shrink: 0
+        }
+
+        .lp-si {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--panel);
+            border-radius: 8px;
+            padding: 8px 12px
+        }
+
+        .lp-si svg {
+            color: var(--muted);
+            flex-shrink: 0
+        }
+
+        .lp-si input {
+            background: transparent;
+            border: none;
+            flex: 1;
+            font-size: 14px;
+            color: var(--text)
+        }
+
+        .lp-si input::placeholder {
+            color: var(--muted)
+        }
+
+        .conv-list {
+            flex: 1;
+            overflow-y: auto
+        }
+
+        .sec-sep {
+            padding: 6px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: var(--muted);
+            background: #fff;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .ci {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+            transition: background .1s;
+            position: relative;
+            list-style: none
+        }
+
+        .ci:hover {
+            background: var(--hover)
+        }
+
+        .ci.active {
+            background: var(--active)
+        }
+
+        .ci-av-hash {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: var(--h2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+            color: #fff;
+            flex-shrink: 0
+        }
+
+        .ci-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .ci-name {
+            font-size: 15px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .ci-prev {
+            font-size: 13px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px
+        }
+
+        .ci-meta {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px
+        }
+
+        .ci-badge {
+            min-width: 20px;
+            height: 20px;
+            border-radius: 10px;
+            background: var(--unread);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 0 5px;
+            display: none;
+            align-items: center;
+            justify-content: center
+        }
+
+        .ci-badge.show {
+            display: flex
+        }
+
+        .lp-footer {
+            padding: 10px 16px;
+            background: var(--panel);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0
+        }
+
+        .lp-fi {
+            display: flex;
+            align-items: center;
+            justify-content: space-between
+        }
+
+        .my-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer
+        }
+
+        .my-av {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: #fff
+        }
+
+        .my-name {
+            font-size: 13px;
+            font-weight: 600
+        }
+
+        .my-st {
+            font-size: 11px;
+            color: var(--green);
+            font-weight: 500
+        }
+
+        /* CHAT */
+        .rc {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--chat-bg);
+            position: relative;
+            min-width: 0
+        }
+
+        .ch {
+            height: 59px;
+            background: var(--panel);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer
+        }
+
+        .ch-l {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 0
+        }
+
+        .ch-av {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: #fff
+        }
+
+        .ch-name {
+            font-size: 15px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: color .15s
+        }
+
+        .ch:hover .ch-name {
+            color: var(--teal)
+        }
+
+        .ch-desc {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 1px
+        }
+
+        .ch-acts {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0
+        }
+
+        /* Messages */
+        .ma {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 8%;
+            position: relative
+        }
+
+        #mc {
+            position: relative;
+            z-index: 1
+        }
+
+        .ds {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0
+        }
+
+        .ds span {
+            background: rgba(225, 225, 225, .92);
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 500;
+            padding: 4px 12px;
+            border-radius: 7px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .08)
+        }
+
+        .mr {
+            display: flex;
+            margin: 1px 0;
+            position: relative
+        }
+
+        .mr.out {
+            justify-content: flex-end
+        }
+
+        .mr.in {
+            justify-content: flex-start
+        }
+
+        .mr.gap {
+            margin-top: 10px
+        }
+
+        .bbl {
+            max-width: 65%;
+            padding: 6px 10px 6px 9px;
+            border-radius: 8px;
+            font-size: 14.5px;
+            line-height: 1.55;
+            position: relative;
+            word-break: break-word;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .1)
+        }
+
+        .bbl.out {
+            background: var(--bub-out);
+            border-top-right-radius: 2px
+        }
+
+        .bbl.in {
+            background: var(--bub-in);
+            border-top-left-radius: 2px
+        }
+
+        .bbl.tout::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -8px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 0 9px 9px;
+            border-color: transparent transparent transparent var(--bub-out)
+        }
+
+        .bbl.tin::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -8px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 9px 9px 0;
+            border-color: transparent var(--bub-in) transparent transparent
+        }
+
+        .snm {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 3px
+        }
+
+        .mm {
+            float: right;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            margin: -3px -1px -1px 8px;
+            padding-top: 4px
+        }
+
+        .mt {
+            font-size: 11px;
+            color: var(--muted)
+        }
+
+        .tick svg {
+            color: #53bdeb;
+            display: block
+        }
+
+        /* Typing */
+        .tw {
+            padding: 4px 8%;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0
+        }
+
+        .tbw {
+            display: none;
+            align-items: center;
+            gap: 8px
+        }
+
+        .tbw.show {
+            display: flex
+        }
+
+        .tb {
+            background: var(--bub-in);
+            padding: 8px 14px;
+            border-radius: 8px;
+            border-top-left-radius: 2px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .1);
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            position: relative
+        }
+
+        .tb::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -8px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 0 9px 9px 0;
+            border-color: transparent var(--bub-in) transparent transparent
+        }
+
+        .td {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #aaa;
+            animation: td 1.4s ease-in-out infinite
+        }
+
+        .td:nth-child(2) {
+            animation-delay: .2s
+        }
+
+        .td:nth-child(3) {
+            animation-delay: .4s
+        }
+
+        @keyframes td {
+
+            0%,
+            60%,
+            100% {
+                transform: scale(.6);
+                opacity: .5
+            }
+
+            30% {
+                transform: scale(1);
+                opacity: 1
+            }
+        }
+
+        .twho {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        /* Input */
+        .ib-wrap {
+            background: var(--panel);
+            padding: 8px 12px;
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            flex-shrink: 0;
+            border-top: 1px solid var(--border)
+        }
+
+        .ibb {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--icon);
+            transition: background .15s
+        }
+
+        .ibb:hover {
+            background: rgba(0, 0, 0, .07);
+            color: var(--text)
+        }
+
+        .itx {
+            flex: 1;
+            background: #fff;
+            border-radius: 22px;
+            padding: 10px 16px;
+            min-height: 42px;
+            max-height: 150px;
+            border: none;
+            font-size: 15px;
+            color: var(--text);
+            resize: none;
+            line-height: 1.4;
+            overflow-y: auto;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .06)
+        }
+
+        .itx::placeholder {
+            color: var(--muted)
+        }
+
+        .sc {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: var(--send);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 168, 132, .4);
+            transition: all .15s
+        }
+
+        .sc:hover {
+            background: var(--h2);
+            transform: scale(1.06)
+        }
+
+        .sc:active {
+            transform: scale(.94)
+        }
+
+        .sc svg {
+            width: 20px;
+            height: 20px
+        }
+
+        /* Emoji bar */
+        #eb {
+            display: none;
+            background: var(--panel);
+            padding: 5px 12px;
+            gap: 4px;
+            flex-wrap: wrap;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0
+        }
+
+        /* Scroll btn */
+        .sbb {
+            position: absolute;
+            bottom: 72px;
+            right: 16px;
+            z-index: 10;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #fff;
+            color: var(--icon);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: all .2s
+        }
+
+        .sbb.show {
+            opacity: 1;
+            pointer-events: all
+        }
+
+        .sbb:hover {
+            background: var(--panel)
+        }
+
+        .sbb-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            background: var(--unread);
+            border-radius: 9px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #fff;
+            display: none;
+            align-items: center;
+            justify-content: center
+        }
+
+        .sbb-badge.show {
+            display: flex
+        }
+
+        /* STATS PANEL */
+        .sp {
+            width: 0;
+            overflow: hidden;
+            background: #fff;
+            border-left: 1px solid var(--border);
+            transition: width .3s cubic-bezier(.4, 0, .2, 1);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0
+        }
+
+        .sp.open {
+            width: 320px
+        }
+
+        .sp-hdr {
+            height: 59px;
+            background: var(--h1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 16px;
+            flex-shrink: 0
+        }
+
+        .sp-hdr span {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            flex: 1
+        }
+
+        .sp-body {
+            flex: 1;
+            overflow-y: auto
+        }
+
+        .sp-sec {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .sp-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            color: var(--muted);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px
+        }
+
+        .sp-title::before {
+            content: '';
+            width: 3px;
+            height: 11px;
+            border-radius: 2px;
+            background: var(--teal);
+            display: inline-block
+        }
+
+        .cr {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .cr:last-child {
+            border: none
+        }
+
+        .cn {
+            font-size: 13px;
+            font-weight: 500
+        }
+
+        .cok {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--green);
+            display: flex;
+            align-items: center;
+            gap: 4px
+        }
+
+        .cok::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 5px var(--green)
+        }
+
+        .sbr {
+            margin-bottom: 9px
+        }
+
+        .sbt {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px
+        }
+
+        .sbn {
+            font-size: 13px;
+            font-weight: 500
+        }
+
+        .sbc {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .sbk {
+            height: 5px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden
+        }
+
+        .sbf {
+            height: 100%;
+            border-radius: 3px;
+            width: 0%;
+            transition: width 1.1s ease;
+            background: var(--teal)
+        }
+
+        .sor {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .sor:last-child {
+            border: none
+        }
+
+        .srk {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: rgba(0, 168, 132, .1);
+            color: var(--teal);
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0
+        }
+
+        .sname {
+            font-size: 13px;
+            font-weight: 500;
+            flex: 1
+        }
+
+        .scnt {
+            font-size: 12px;
+            color: var(--muted)
+        }
+
+        .tc {
+            text-align: center;
+            padding: 14px 0
+        }
+
+        .tl {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: var(--muted);
+            margin-bottom: 3px
+        }
+
+        .tn {
+            font-size: 38px;
+            font-weight: 700;
+            color: var(--h1);
+            letter-spacing: -2px
+        }
+
+        .rb {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin: 6px auto 0;
+            transition: color .15s
+        }
+
+        .rb:hover {
+            color: var(--teal)
+        }
+
+        .rb svg {
+            transition: transform .5s
+        }
+
+        .rb:hover svg {
+            transform: rotate(180deg)
+        }
+
+        .oi {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .oi:last-child {
+            border: none
+        }
+
+        .oname {
+            font-size: 13px;
+            font-weight: 500;
+            flex: 1
+        }
+
+        .odot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 5px var(--green);
+            flex-shrink: 0
+        }
+
+        /* MODALS */
+        .mb {
+            position: fixed;
+            inset: 0;
+            z-index: 500;
+            background: rgba(0, 0, 0, .45);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px
+        }
+
+        .mb.hidden {
+            display: none
+        }
+
+        .mbox {
+            background: #fff;
+            border-radius: 14px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+            animation: mi .24s cubic-bezier(.34, 1.56, .64, 1);
+            overflow: hidden
+        }
+
+        @keyframes mi {
+            from {
+                opacity: 0;
+                transform: scale(.93) translateY(8px)
+            }
+
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        .mh {
+            background: var(--h1);
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between
+        }
+
+        .mh-t {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600
+        }
+
+        .mx {
+            color: rgba(255, 255, 255, .8);
+            padding: 4px;
+            border-radius: 6px;
+            transition: all .15s;
+            display: flex
+        }
+
+        .mx:hover {
+            background: rgba(255, 255, 255, .15);
+            color: #fff
+        }
+
+        .mbdy {
+            padding: 18px
+        }
+
+        .mf {
+            margin-bottom: 13px
+        }
+
+        .mf label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: var(--muted);
+            margin-bottom: 6px
+        }
+
+        .mf input {
+            width: 100%;
+            padding: 10px 13px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text);
+            transition: border-color .2s
+        }
+
+        .mf input:focus {
+            border-color: var(--teal)
+        }
+
+        .mft {
+            display: flex;
+            gap: 10px;
+            padding: 0 18px 18px
+        }
+
+        .bok {
+            flex: 1;
+            padding: 11px;
+            border-radius: 8px;
+            background: var(--teal);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all .15s
+        }
+
+        .bok:hover {
+            background: var(--h2)
+        }
+
+        .bcancel {
+            flex: 1;
+            padding: 11px;
+            border-radius: 8px;
+            background: var(--panel);
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 600;
+            border: 1.5px solid var(--border);
+            transition: all .15s
+        }
+
+        .bcancel:hover {
+            background: var(--hover);
+            color: var(--text)
+        }
+
+        .sl {
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            margin-top: 4px;
+            max-height: 160px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .1)
+        }
+
+        .sl.show {
+            display: block
+        }
+
+        .si {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 13px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background .1s
+        }
+
+        .si:hover {
+            background: var(--hover)
+        }
+
+        /* Search */
+        .src {
+            background: #fff;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+            border: 1px solid var(--border)
+        }
+
+        .sh {
+            background: #FFFDE7;
+            color: #F57F17;
+            padding: 0 2px;
+            border-radius: 2px;
+            font-weight: 600
+        }
+
+        /* Group info */
+        .mrow {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 7px 0;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .mrow:last-child {
+            border: none
+        }
+
+        .mrow-name {
+            font-size: 13px;
+            font-weight: 500;
+            flex: 1
+        }
+
+        .abadge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 4px;
+            background: #E8F5E9;
+            color: var(--h1)
+        }
+
+        .kbtn {
+            font-size: 12px;
+            font-weight: 600;
+            color: #C62828;
+            background: #FFEBEE;
+            padding: 3px 8px;
+            border-radius: 6px;
+            transition: background .15s
+        }
+
+        .kbtn:hover {
+            background: #FFCDD2
+        }
+
+        /* Context menu */
+        #ctx {
+            position: fixed;
+            z-index: 999;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .2);
+            border: 1px solid var(--border);
+            padding: 4px;
+            min-width: 140px;
+            display: none
+        }
+
+        .cxi {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background .1s
+        }
+
+        .cxi:hover {
+            background: var(--hover)
+        }
+
+        /* Toast */
+        #tc {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            pointer-events: none
+        }
+
+        .tst {
+            background: #fff;
+            border-radius: 10px;
+            padding: 11px 14px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            min-width: 250px;
+            max-width: 360px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .14);
+            border: 1px solid var(--border);
+            transform: translateX(120%);
+            opacity: 0;
+            transition: all .3s cubic-bezier(.34, 1.56, .64, 1);
+            pointer-events: all
+        }
+
+        .tst.show {
+            transform: none;
+            opacity: 1
+        }
+
+        .tst.hide {
+            transform: translateX(120%);
+            opacity: 0
+        }
+
+        .tok {
+            color: var(--green)
+        }
+
+        .terr {
+            color: #C62828
+        }
+
+        .tmsg {
+            font-size: 13px;
+            font-weight: 500;
+            flex: 1
+        }
+    </style>
 </head>
+
 <body>
 
-<!-- Toast container -->
+    <div id="tc"></div>
 
-<!-- Toast container -->
-<div id="toast-container"></div>
-
-<div class="auth-overlay" id="auth-screen">
-  <div class="auth-top-bar"></div>
-  <div class="auth-container" style="max-width: 500px; height: auto; margin-top: -60px; padding: 40px;">
-    <div style="width: 100%;">
-      <div style="display:flex;align-items:center;gap:15px;margin-bottom:30px;justify-content:center">
-        <div class="logo-icon" style="background:var(--wa-teal);transform:scale(1.1)">
-          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+    <div id="ctx">
+        <div class="cxi" onclick="ctxCopy()">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2" />
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2" />
+            </svg>Copier
         </div>
-        <h2 style="font-weight:700;color:#54656f;letter-spacing:1px">NEXUS WEB</h2>
-      </div>
-      
-      <h1 class="auth-title" style="text-align:center;font-size:22px;margin-bottom:30px">Accédez à la messagerie</h1>
-      
-      <div id="login-error" class="error-msg"></div>
-      
-      <div class="auth-input-group">
-        <label>NOM D'UTILISATEUR</label>
-        <input id="username-input" class="auth-input" type="text" placeholder="Pseudo" maxlength="20" autocomplete="off">
-      </div>
-      
-      <div class="auth-input-group">
-        <label>MOT DE PASSE</label>
-        <input id="password-input" class="auth-input" type="password" placeholder="Mot de passe">
-      </div>
-      
-      <div style="margin-top:30px">
-        <button class="auth-btn" id="join-btn" style="width: 100%; border-radius: 8px;">
-          <div class="spinner" id="auth-spinner"></div>
-          <span id="auth-btn-text">SE CONNECTER / CRÉER UN COMPTE</span>
-        </button>
-      </div>
-      
-      <p style="text-align:center;margin-top:25px;color:#8696a0;font-size:12px">
-        Système distribué NoSQL No-Log<br>
-        <span style="color:#008069;font-weight:600">Sécurisé avec Redis & MongoDB</span>
-      </p>
-    </div>
-  </div>
-</div>
-
-<div class="app hidden" id="main-app">
-
-  <!-- ─── SIDEBAR ─── -->
-  <aside class="sidebar">
-    <div class="sidebar-logo">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div class="logo-icon" id="my-avatar-mini" onclick="openMyProfile()" style="cursor:pointer">?</div>
-        <span id="my-username" style="font-weight:600;font-size:14px;color:#3b4a54"></span>
-      </div>
-      <div style="display:flex;gap:15px">
-        <button class="hdr-btn" title="Ajouter un contact" onclick="openModal('add-contact-modal')">
-          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4"/></svg>
-        </button>
-        <button class="hdr-btn" title="Nouveau groupe" onclick="openModal('create-group-modal')">
-          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        </button>
-        <button class="hdr-btn" title="Déconnexion" onclick="logout()">
-          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg>
-        </button>
-      </div>
-    </div>
-
-    <div class="sidebar-search">
-      <div style="background:#f0f2f5;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:10px">
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#54656f" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <input type="text" id="conv-search" placeholder="Rechercher ou démarrer une discussion" oninput="filterConvs(this.value)" style="border:none;background:transparent;width:100%;outline:none;font-size:14px">
-      </div>
-    </div>
-
-    <div class="sidebar-sections">
-      <div class="section-header" onclick="toggleSection('groups-section','groups-toggle')">
-        <span class="section-title">GROUPES</span>
-        <svg id="groups-toggle" class="section-toggle open" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5l7 7-7 7" stroke-width="2.5"/></svg>
-      </div>
-      <ul class="section-list" id="groups-section"></ul>
-
-      <div class="section-header" style="margin-top:8px" onclick="toggleSection('dms-section','dms-toggle')">
-        <span class="section-title">DISCUSSIONS PERSONNELLES</span>
-        <svg id="dms-toggle" class="section-toggle open" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5l7 7-7 7" stroke-width="2.5"/></svg>
-      </div>
-      <ul class="section-list" id="dms-section"></ul>
-    </div>
-  </aside>
-
-  <!-- ─── CHAT AREA ─── -->
-  <main class="chat-area">
-    <header class="chat-header">
-      <div class="chat-header-left" onclick="openContextInfo()">
-        <div class="chat-header-icon" id="header-icon">#</div>
-        <div>
-          <div class="chat-header-name" id="header-name">Sélectionnez un salon</div>
-          <div class="chat-header-desc" id="header-desc">NoSQL distributed channel</div>
+        <div class="cxi" onclick="ctxReply()">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path d="M3 10h11a8 8 0 018 8v2M3 10l7 7M3 10l7-7" stroke-width="2" />
+            </svg>Répondre
         </div>
-      </div>
-      <div class="chat-header-actions">
-        <button class="hdr-btn" onclick="openModal('search-modal')" title="Rechercher messages">
-          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        </button>
-        <button class="hdr-btn" onclick="socket.emit('get_stats')" title="Statistiques NoSQL">
-          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        </button>
-        <button class="hdr-btn" id="ctx-action-btn" style="display:none"></button>
-      </div>
-    </header>
-
-    <div class="messages-wrap" id="messages-wrap" onscroll="onMsgsScroll()">
-      <div id="messages-container"></div>
-      <div id="scroll-anchor"></div>
-      <button class="scroll-bottom-btn" id="scroll-bottom-btn" onclick="scrollToBottom()">
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2.5"/></svg>
-        <span class="scroll-bottom-badge" id="unread-badge"></span>
-      </button>
     </div>
 
-    <div class="typing-bar" id="typing-bar">
-      <div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-      <span id="typing-text">rédaction…</span>
-    </div>
-
-    <div class="chat-input-wrap">
-      <div class="input-box">
-        <button class="hdr-btn" title="Emoji" onclick="insertEmoji()" style="font-size:20px;padding:0">😊</button>
-        <textarea id="msg-input" rows="1" placeholder="Tapez un message"></textarea>
-        <button class="send-btn" id="send-btn">
-          <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.269 20.876L5.999 12zm0 0h7.5"/></svg>
-        </button>
-      </div>
-    </div>
-  </main>
-
-  <!-- ─── RIGHT PANEL ─── -->
-  <aside class="right-panel">
-    <div class="panel-section">
-      <div class="panel-title">MÉTROLOGIE</div>
-      <div class="total-card">
-        <div class="total-label">Messages Totaux (Global)</div>
-        <div class="total-num" id="total-msgs">—</div>
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-title">TOP EXPÉDITEURS</div>
-      <div id="top-senders"></div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-title">PLUS SOLLICITÉS</div>
-      <div id="most-solicited"></div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-title">EN LIGNE <span class="online-count-badge" id="online-count">0</span></div>
-      <div class="online-list" id="online-list"></div>
-    </div>
-  </aside>
-
-</div>
-
-<!-- SEARCH -->
-<div class="modal-overlay hidden" id="search-modal">
-  <div class="modal" style="max-width:700px;height:80vh;display:flex;flex-direction:column;position:relative">
-    <button class="modal-close" onclick="closeModal('search-modal')"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg></button>
-    <div class="modal-title">Recherche NoSQL</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-      <div>
-        <div class="field" style="margin-bottom:0">
-          <label>Mot-clé</label>
-          <div style="display:flex;gap:8px">
-            <input id="search-kw" type="text" placeholder="urgent, dev…" style="flex:1" onkeydown="if(e.key==='Enter')searchKw()">
-            <button class="btn btn-primary btn-sm" onclick="searchKw()">Go</button>
-          </div>
+    <!-- LOGIN -->
+    <div id="login-screen">
+        <div class="login-card">
+            <div class="login-top">
+                <div class="login-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" />
+                    </svg>
+                </div>
+                <div class="login-title">Nexus Chat</div>
+                <div class="login-sub">NoSQL Distributed Engine &bull; INFO834</div>
+            </div>
+            <div class="login-body">
+                <div class="login-steps" id="lsteps">
+                    <!-- STEP 1 -->
+                    <div class="lstep" id="s1">
+                        <div class="login-err" id="e1"><svg width="14" height="14" fill="currentColor"
+                                viewBox="0 0 24 24">
+                                <path
+                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                            </svg><span id="e1m"></span></div>
+                        <div class="fw">
+                            <label>Nom d'utilisateur</label>
+                            <div class="ii">
+                                <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"
+                                        stroke-width="2" />
+                                </svg>
+                                <input type="text" id="ui" placeholder="Votre pseudo" maxlength="20"
+                                    autocomplete="username" autocorrect="off" autocapitalize="off" spellcheck="false">
+                            </div>
+                        </div>
+                        <button class="btn-g" onclick="goS2()">
+                            Continuer
+                            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path d="M9 5l7 7-7 7" stroke-width="2.5" />
+                            </svg>
+                        </button>
+                        <p class="login-hint">Si le compte n'existe pas, il sera <b>cr&eacute;&eacute;
+                                automatiquement</b></p>
+                    </div>
+                    <!-- STEP 2 -->
+                    <div class="lstep right" id="s2">
+                        <button class="btn-back" onclick="goS1()">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path d="M15 19l-7-7 7-7" stroke-width="2.5" />
+                            </svg>Retour
+                        </button>
+                        <div class="step2-user">
+                            <div id="s2av"
+                                style="width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:19px;color:#fff;flex-shrink:0">
+                            </div>
+                            <div>
+                                <div style="font-size:16px;font-weight:700" id="s2nm">Pseudo</div>
+                                <div style="font-size:12px;color:var(--muted)">Entrez votre mot de passe</div>
+                            </div>
+                        </div>
+                        <div class="login-err" id="e2"><svg width="14" height="14" fill="currentColor"
+                                viewBox="0 0 24 24">
+                                <path
+                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                            </svg><span id="e2m"></span></div>
+                        <div class="fw">
+                            <label>Mot de passe</label>
+                            <div class="ii">
+                                <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" stroke-width="2" />
+                                    <path d="M7 11V7a5 5 0 0110 0v4" stroke-width="2" />
+                                </svg>
+                                <input type="password" id="pi" placeholder="Mot de passe"
+                                    autocomplete="current-password" style="padding-right:42px">
+                                <button class="toggle-pw" onclick="tpw()"><svg id="pweye" width="15" height="15"
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-width="2" />
+                                        <circle cx="12" cy="12" r="3" stroke-width="2" />
+                                    </svg></button>
+                            </div>
+                        </div>
+                        <div class="login-loading" id="ll">
+                            <div class="spinner"></div>Connexion en cours&hellip;
+                        </div>
+                        <button class="btn-g" id="blg" onclick="doLogin()">
+                            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"
+                                    stroke-width="2" />
+                            </svg>Se connecter
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-      <div>
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);display:block;margin-bottom:6px">Plage Horaire</label>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input id="search-t1" type="text" placeholder="HH:MM" style="width:75px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 10px;font-size:14px;color:var(--text);outline:none;text-align:center">
-          <span style="color:var(--dim)">→</span>
-          <input id="search-t2" type="text" placeholder="HH:MM" style="width:75px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 10px;font-size:14px;color:var(--text);outline:none;text-align:center">
-          <button class="btn btn-primary btn-sm" onclick="searchTime()" style="flex:1">Filtrer</button>
+    </div>
+
+    <!-- APP -->
+    <div id="app">
+        <div class="app-inner">
+            <!-- LEFT -->
+            <div class="lp">
+                <div class="lp-hdr">
+                    <div class="lp-hdr-av" id="hav" onclick="oMyP()">?</div>
+                    <span class="lp-hdr-title">Nexus Chat</span>
+                    <div class="lp-hdr-icons">
+                        <button class="ib" title="Ajouter un contact" onclick="oM('m-ac')"><svg width="19" height="19"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path
+                                    d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM20 8v6M23 11h-6"
+                                    stroke-width="2" />
+                            </svg></button>
+                        <button class="ib" title="Nouveau groupe" onclick="oM('m-cg')"><svg width="19" height="19"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path
+                                    d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"
+                                    stroke-width="2" />
+                            </svg></button>
+                        <button class="ib" title="Recherche" onclick="oM('m-s')"><svg width="19" height="19" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2" />
+                            </svg></button>
+                    </div>
+                </div>
+                <div class="lp-search">
+                    <div class="lp-si">
+                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2" />
+                        </svg>
+                        <input type="text" placeholder="Rechercher une discussion" oninput="fcv(this.value)">
+                    </div>
+                </div>
+                <div class="conv-list" id="cvl">
+                    <div class="sec-sep">Salons</div>
+                    <ul id="gl" style="list-style:none"></ul>
+                    <div class="sec-sep">Messages Priv&eacute;s</div>
+                    <ul id="dl" style="list-style:none"></ul>
+                </div>
+                <div class="lp-footer">
+                    <div class="lp-fi">
+                        <div class="my-info" onclick="oMyP()">
+                            <div class="my-av" id="fav">?</div>
+                            <div>
+                                <div class="my-name" id="fnm">Pseudo</div>
+                                <div class="my-st">En ligne</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:4px">
+                            <button class="ib" title="Stats NoSQL" onclick="togStats()"><svg width="17" height="17"
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path d="M9 19V6l2-3h6l2 3v13M9 19H5a2 2 0 01-2-2V9M9 19h10a2 2 0 002-2V9"
+                                        stroke-width="2" />
+                                </svg></button>
+                            <button class="ib" title="D&eacute;connexion" style="color:#C62828" onclick="logout()"><svg
+                                    width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                                        stroke-width="2" />
+                                </svg></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHAT -->
+            <div class="rc">
+                <div class="ch">
+                    <div class="ch-l" onclick="oCtxI()">
+                        <div class="ch-av" id="chav" style="background:var(--h2)">G</div>
+                        <div>
+                            <div class="ch-name" id="chnm">G&eacute;n&eacute;ral</div>
+                            <div class="ch-desc" id="chdc">Salon public &bull; synchronis&eacute; Redis/TCP</div>
+                        </div>
+                    </div>
+                    <div class="ch-acts" onclick="event.stopPropagation()">
+                        <button class="ib" title="Recherche" onclick="oM('m-s')"><svg width="19" height="19" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2" />
+                            </svg></button>
+                        <button class="ib" id="cab" style="display:none;color:#C62828" title="Action"><svg width="19"
+                                height="19" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    stroke-width="2" />
+                            </svg></button>
+                    </div>
+                </div>
+                <div class="ma" id="ma" onscroll="oScr()">
+                    <div id="mc"></div>
+                    <div id="sa"></div>
+                    <button class="sbb" id="sbb" onclick="scDown()">
+                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path d="M19 9l-7 7-7-7" stroke-width="2.5" />
+                        </svg>
+                        <span class="sbb-badge" id="ub"></span>
+                    </button>
+                </div>
+                <div class="tw">
+                    <div class="tbw" id="tbw">
+                        <div style="position:relative">
+                            <div class="tb">
+                                <div class="td"></div>
+                                <div class="td"></div>
+                                <div class="td"></div>
+                            </div>
+                        </div><span class="twho" id="twho"></span>
+                    </div>
+                </div>
+                <div class="ib-wrap">
+                    <button class="ibb" onclick="togEmoji()"><svg width="21" height="21" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor">
+                            <circle cx="12" cy="12" r="10" stroke-width="2" />
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2" stroke-width="2" stroke-linecap="round" />
+                            <line x1="9" y1="9" x2="9.01" y2="9" stroke-width="3" stroke-linecap="round" />
+                            <line x1="15" y1="9" x2="15.01" y2="9" stroke-width="3" stroke-linecap="round" />
+                        </svg></button>
+                    <textarea class="itx" id="mi" rows="1" placeholder="Tapez un message"></textarea>
+                    <button class="sc" id="sb"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.269 20.876L5.999 12zm0 0h7.5" />
+                        </svg></button>
+                </div>
+                <div id="eb"
+                    style="display:none;flex-wrap:wrap;gap:3px;padding:5px 12px;background:var(--panel);border-top:1px solid var(--border)">
+                    <span
+                        style="font-size:11px;color:var(--muted);align-self:center;margin-right:4px;font-weight:500">Rapide
+                        :</span>
+                </div>
+            </div>
+
+            <!-- STATS -->
+            <div class="sp" id="sp">
+                <div class="sp-hdr">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+                        <path
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <span>Insights NoSQL</span>
+                    <button class="ib" style="color:rgba(255,255,255,.75)" onclick="togStats()"><svg width="17"
+                            height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path d="M6 18L18 6M6 6l12 12" stroke-width="2" />
+                        </svg></button>
+                </div>
+                <div class="sp-body">
+                    <div class="sp-sec">
+                        <div class="sp-title">Connexions</div>
+                        <div class="cr"><span class="cn">MongoDB ReplicaSet</span><span
+                                class="cok">Connect&eacute;</span></div>
+                        <div class="cr"><span class="cn">Redis Pub/Sub</span><span class="cok">Connect&eacute;</span>
+                        </div>
+                    </div>
+                    <div class="sp-sec">
+                        <div class="sp-title">Top Exp&eacute;diteurs</div>
+                        <div id="tsl"></div>
+                    </div>
+                    <div class="sp-sec">
+                        <div class="sp-title">Plus Sollicit&eacute;s (MP)</div>
+                        <div id="msl"></div>
+                    </div>
+                    <div class="sp-sec">
+                        <div class="tc">
+                            <div class="tl">Messages trait&eacute;s</div>
+                            <div class="tn" id="tnm">&mdash;</div><button class="rb"
+                                onclick="socket.emit('get_stats')"><svg width="12" height="12" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                        stroke-width="2" />
+                                </svg>Actualiser</button>
+                        </div>
+                    </div>
+                    <div class="sp-sec">
+                        <div class="sp-title">En Ligne <span
+                                style="background:#E8F5E9;color:var(--h1);font-size:10px;padding:2px 7px;border-radius:9px;font-weight:700;margin-left:4px"
+                                id="ocnt">0</span></div>
+                        <div id="oul"></div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-    <div style="flex:1;overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px">
-      <div id="search-results-list"><p style="text-align:center;color:var(--dim);font-size:13px;padding:40px 0">Entrez un terme de recherche…</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- EDIT PROFILE -->
-<div class="modal-overlay hidden" id="profile-modal" onclick="if(event.target===this)closeModal('profile-modal')">
-  <div class="modal" style="max-width:360px;text-align:center;position:relative">
-    <button class="modal-close" onclick="closeModal('profile-modal')"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg></button>
-    <div class="modal-title">Mon Profil</div>
-    <div id="profile-avatar" style="width:72px;height:72px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;color:#fff;margin:0 auto 16px;box-shadow:0 8px 24px rgba(0,0,0,0.3)">?</div>
-    <div class="field"><label>Statut / Bio</label><input id="bio-input" type="text" placeholder="Salut ! J'utilise Nexus." maxlength="60"></div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('profile-modal')">Annuler</button>
-      <button class="btn btn-primary" id="save-bio-btn">Sauvegarder</button>
-    </div>
-  </div>
-</div>
-
-<!-- CONTACT INFO -->
-<div class="modal-overlay hidden" id="contact-info-modal" onclick="if(event.target===this)closeModal('contact-info-modal')">
-  <div class="modal" style="max-width:360px;text-align:center;position:relative">
-    <button class="modal-close" onclick="closeModal('contact-info-modal')"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg></button>
-    <div id="ci-avatar" style="width:72px;height:72px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:28px;color:#fff;margin:0 auto 12px">?</div>
-    <div style="font-size:20px;font-weight:800;margin-bottom:4px" id="ci-name">Pseudo</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:20px" id="ci-online-badge"></div>
-    <div style="background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:12px 16px;text-align:left">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px">Bio</div>
-      <div style="font-size:13px;color:var(--text)" id="ci-bio">…</div>
-    </div>
-    <button class="btn btn-ghost" style="margin-top:14px" onclick="closeModal('contact-info-modal')">Fermer</button>
-  </div>
-</div>
-
-<!-- GROUP INFO -->
-<div class="modal-overlay hidden" id="group-info-modal" onclick="if(event.target===this)closeModal('group-info-modal')">
-  <div class="modal" style="max-width:380px;display:flex;flex-direction:column;max-height:85vh;position:relative">
-    <button class="modal-close" onclick="closeModal('group-info-modal')"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg></button>
-    <div class="modal-title" id="gi-name">Groupe</div>
-    <div style="font-size:12px;color:var(--muted);margin-top:-14px;margin-bottom:16px">Créé par <span style="color:var(--primary);font-weight:600" id="gi-creator">?</span></div>
-
-    <!-- Admin tools -->
-    <div id="gi-admin-tools" style="display:none;margin-bottom:14px">
-      <div style="display:flex;gap:8px">
-        <input id="gi-add-input" type="text" placeholder="Ajouter un membre…" style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--text);outline:none">
-        <button class="btn btn-primary btn-sm" onclick="addGroupMember()">Ajouter</button>
-      </div>
     </div>
 
-    <!-- Members list -->
-    <div style="flex:1;overflow-y:auto">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:8px">Membres (<span id="gi-count">0</span>)</div>
-      <div id="gi-members"></div>
+    <!-- MODALS -->
+    <div class="mb hidden" id="m-ac">
+        <div class="mbox">
+            <div class="mh"><span class="mh-t">Nouveau contact</span><button class="mx" onclick="cM('m-ac')"><svg
+                        width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2.5" />
+                    </svg></button></div>
+            <div class="mbdy">
+                <div class="mf" style="position:relative"><label>Nom d'utilisateur</label><input id="aci" type="text"
+                        placeholder="Rechercher&hellip;" oninput="sU(this.value,'acs')" autocomplete="off">
+                    <div class="sl" id="acs"></div>
+                </div>
+            </div>
+            <div class="mft"><button class="bcancel" onclick="cM('m-ac')">Annuler</button><button class="bok"
+                    id="badd">Ajouter</button></div>
+        </div>
     </div>
-    <button class="btn btn-ghost" style="margin-top:14px" onclick="closeModal('group-info-modal')">Fermer</button>
-  </div>
-</div>
 
-<!-- ADD CONTACT -->
-<div class="modal-overlay hidden" id="add-contact-modal" onclick="if(event.target===this)closeModal('add-contact-modal')">
-  <div class="modal" style="max-width:380px;position:relative">
-    <button class="modal-close" onclick="closeModal('add-contact-modal')"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg></button>
-    <div class="modal-title">Ajouter un contact</div>
-    <div class="field" style="position:relative">
-      <label>Nom d'utilisateur</label>
-      <input id="contact-input" type="text" placeholder="Rechercher…" oninput="searchUsers(this.value,'contact-sugg')" autocomplete="off">
-      <div class="suggestions-list" id="contact-sugg"></div>
+    <div class="mb hidden" id="m-cg">
+        <div class="mbox" style="max-width:460px">
+            <div class="mh"><span class="mh-t">Nouveau groupe</span><button class="mx" onclick="cM('m-cg')"><svg
+                        width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2.5" />
+                    </svg></button></div>
+            <div class="mbdy">
+                <div class="mf"><label>Nom du groupe</label><input id="gni" type="text" placeholder="ex: dev-team">
+                </div>
+                <div class="mf" style="position:relative"><label>Membres (virgule pour s&eacute;parer)</label><input
+                        id="gmi" type="text" placeholder="alice, bob&hellip;" oninput="sU(this.value,'gms')"
+                        autocomplete="off">
+                    <div class="sl" id="gms"></div>
+                </div>
+            </div>
+            <div class="mft"><button class="bcancel" onclick="cM('m-cg')">Annuler</button><button class="bok"
+                    id="bcg">Cr&eacute;er</button></div>
+        </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('add-contact-modal')">Annuler</button>
-      <button class="btn btn-primary" id="add-contact-btn">Ajouter</button>
+
+    <div class="mb hidden" id="m-s">
+        <div class="mbox" style="max-width:680px;height:80vh;display:flex;flex-direction:column">
+            <div class="mh"><span class="mh-t">Recherche NoSQL</span><button class="mx" onclick="cM('m-s')"><svg
+                        width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2.5" />
+                    </svg></button></div>
+            <div class="mbdy" style="border-bottom:1px solid var(--border);flex-shrink:0">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="mf" style="margin:0"><label>Mot-cl&eacute;</label>
+                        <div style="display:flex;gap:6px"><input id="ski" type="text" placeholder="ex: urgent"
+                                style="flex:1"><button class="bok" style="flex:none;padding:8px 14px;border-radius:8px"
+                                onclick="dSK()">Go</button></div>
+                    </div>
+                    <div class="mf" style="margin:0"><label>Plage horaire</label>
+                        <div style="display:flex;gap:5px;align-items:center"><input id="st1" type="text"
+                                placeholder="HH:MM" style="width:68px;text-align:center"><span
+                                style="color:var(--muted)">&#8594;</span><input id="st2" type="text" placeholder="HH:MM"
+                                style="width:68px;text-align:center"><button class="bok"
+                                style="flex:1;padding:8px;border-radius:8px" onclick="dST()">Filtrer</button></div>
+                    </div>
+                </div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:14px" id="srb">
+                <p style="text-align:center;color:var(--muted);font-size:13px;padding:36px 0">Entrez un terme de
+                    recherche&hellip;</p>
+            </div>
+        </div>
     </div>
-  </div>
-</div>
 
-<!-- CREATE GROUP -->
-<div class="modal-overlay hidden" id="create-group-modal" onclick="if(event.target===this)closeModal('create-group-modal')">
-  <div class="modal" style="max-width:420px;position:relative">
-    <button class="modal-close" onclick="closeModal('create-group-modal')"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg></button>
-    <div class="modal-title">Nouveau Groupe</div>
-    <div class="field"><label>Nom du groupe</label><input id="grp-name" type="text" placeholder="ex: dev-team"></div>
-    <div class="field" style="position:relative">
-      <label>Membres (séparés par des virgules)</label>
-      <input id="grp-members" type="text" placeholder="alice, bob, charlie…" oninput="searchUsers(this.value,'grp-sugg')" autocomplete="off">
-      <div class="suggestions-list" id="grp-sugg"></div>
+    <div class="mb hidden" id="m-p" onclick="if(event.target===this)cM('m-p')">
+        <div class="mbox">
+            <div class="mh"><span class="mh-t">Mon Profil</span><button class="mx" onclick="cM('m-p')"><svg width="17"
+                        height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2.5" />
+                    </svg></button></div>
+            <div class="mbdy" style="text-align:center">
+                <div id="pav"
+                    style="width:68px;height:68px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:26px;color:#fff;margin:0 auto 14px">
+                    ?</div>
+                <div class="mf"><label>Statut / Bio</label><input id="bioi" type="text"
+                        placeholder="Salut ! J'utilise Nexus Chat." maxlength="60"></div>
+            </div>
+            <div class="mft"><button class="bcancel" onclick="cM('m-p')">Annuler</button><button class="bok"
+                    id="bsb">Sauvegarder</button></div>
+        </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('create-group-modal')">Annuler</button>
-      <button class="btn btn-primary" id="create-grp-btn">Créer le groupe</button>
+
+    <div class="mb hidden" id="m-ci" onclick="if(event.target===this)cM('m-ci')">
+        <div class="mbox">
+            <div class="mh"><span class="mh-t">Infos Contact</span><button class="mx" onclick="cM('m-ci')"><svg
+                        width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2.5" />
+                    </svg></button></div>
+            <div class="mbdy" style="text-align:center">
+                <div id="ciav"
+                    style="width:68px;height:68px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:26px;color:#fff;margin:0 auto 12px">
+                    ?</div>
+                <div style="font-size:19px;font-weight:700;margin-bottom:4px" id="cinm">Pseudo</div>
+                <div style="font-size:12px;margin-bottom:14px" id="cist"></div>
+                <div style="background:var(--panel);border-radius:10px;padding:11px 14px;text-align:left">
+                    <div
+                        style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:3px">
+                        Bio</div>
+                    <div style="font-size:13px" id="cibi">&hellip;</div>
+                </div>
+            </div>
+            <div class="mft"><button class="bcancel" onclick="cM('m-ci')" style="flex:1">Fermer</button></div>
+        </div>
     </div>
-  </div>
-</div>
 
-<!-- ════════════════════════ JAVASCRIPT ══════════════════════════════ -->
-<script>
-'use strict';
+    <div class="mb hidden" id="m-gi" onclick="if(event.target===this)cM('m-gi')">
+        <div class="mbox" style="display:flex;flex-direction:column;max-height:85vh">
+            <div class="mh"><span class="mh-t" id="git">Groupe</span><button class="mx" onclick="cM('m-gi')"><svg
+                        width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path d="M6 18L18 6M6 6l12 12" stroke-width="2.5" />
+                    </svg></button></div>
+            <div class="mbdy" style="flex:1;overflow-y:auto">
+                <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Cr&eacute;&eacute; par <span
+                        style="color:var(--h1);font-weight:600" id="gicr"></span></div>
+                <div id="giat"
+                    style="display:none;margin-bottom:12px;padding:10px;background:var(--panel);border-radius:9px">
+                    <div style="display:flex;gap:7px"><input id="giai" type="text"
+                            placeholder="Ajouter un membre&hellip;"
+                            style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px"><button
+                            class="bok" style="flex:none;padding:8px 14px;border-radius:8px"
+                            onclick="aGM()">Ajouter</button></div>
+                </div>
+                <div
+                    style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px">
+                    Membres (<span id="gicnt">0</span>)</div>
+                <div id="giml"></div>
+            </div>
+            <div class="mft"><button class="bcancel" onclick="cM('m-gi')" style="flex:1">Fermer</button></div>
+        </div>
+    </div>
 
-// ─── STATE ───────────────────────────────────────────────────────────
-const socket = io({ autoConnect: false });
-let currentUser = '';
-let activeCtx = { type: 'room', id: 'Général' };
-let lastMsgSender = '';
-let unreadCount = 0;
-let isAtBottom = true;
-let ctxMsgContent = '';
-let currentSuggTarget = '';
-let onlineUsers = [];
+    <script>
+        'use strict';
+        const socket = io({ autoConnect: false });
+        let cu = '', lu = '', ctx = { type: 'room', id: 'General' }, ls = '', iat = true, uc = 0, ous = [], ctxc = '', st = '';
+        const EM = ['👍', '❤️', '😂', '🔥', '🎉', '👏', '🚀', '💯', '✅', '🙏'];
+        const CL = ['#25D366', '#128C7E', '#075E54', '#00BFA5', '#0097A7', '#00838F', '#2E7D32', '#388E3C', '#1565C0', '#6A1B9A'];
 
-// Emoji palette for quick insert
-const EMOJIS = ['👍','❤️','😂','🔥','🎉','👏','🚀','💯'];
+        function gc(s) { if (!s) return '#128C7E'; let h = 0; for (let i = 0; i < s.length; i++)h = s.charCodeAt(i) + ((h << 5) - h); return CL[Math.abs(h) % CL.length] }
+        function es(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
+        function av(n, sz = 36) { const c = gc(n), l = (n || '?')[0].toUpperCase(); return `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${c};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.round(sz / 2.4)}px;color:#fff;flex-shrink:0">${l}</div>` }
+        function oM(id) { document.getElementById(id).classList.remove('hidden') }
+        function cM(id) { document.getElementById(id).classList.add('hidden') }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────
-function getColor(s) {
-  if (!s) return '#25D366';
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
-  const colors = ['#25D366','#128C7E','#075E54','#34b7f1','#f59e0b','#ef4444','#ec4899','#8b5cf6'];
-  return colors[Math.abs(h) % colors.length];
-}
-
-function esc(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-
-function toggleSection(listId, toggleId) {
-  const list = document.getElementById(listId);
-  const tog = document.getElementById(toggleId);
-  list.style.display = list.style.display === 'none' ? '' : 'none';
-  tog.classList.toggle('open', list.style.display !== 'none');
-}
-
-// ─── TOAST ───────────────────────────────────────────────────────────
-function showToast(msg, ok = true) {
-  const tc = document.getElementById('toast-container');
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.innerHTML = `<div class="toast-icon ${ok ? 'ok' : 'err'}">
-    ${ok ? '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M5 13l4 4L19 7" stroke-width="3"/></svg>'
-         : '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" stroke-width="3"/></svg>'}
-  </div>
-  <span class="toast-msg">${esc(msg)}</span>
-  <button class="toast-close" onclick="this.parentElement.remove()">×</button>`;
-  tc.appendChild(t);
-  requestAnimationFrame(() => { t.classList.add('show'); });
-  setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 350); }, 4500);
-}
-
-// ─── SCROLL ──────────────────────────────────────────────────────────
-function scrollToBottom(smooth = true) {
-  const wrap = document.getElementById('messages-wrap');
-  wrap.scrollTo({ top: wrap.scrollHeight, behavior: smooth ? 'smooth' : 'instant' });
-  unreadCount = 0;
-  document.getElementById('unread-badge').textContent = '';
-  document.getElementById('unread-badge').classList.remove('show');
-  document.getElementById('scroll-bottom-btn').classList.remove('show');
-  isAtBottom = true;
-}
-
-function onMsgsScroll() {
-  const wrap = document.getElementById('messages-wrap');
-  const atBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 80;
-  isAtBottom = atBottom;
-  if (atBottom) {
-    unreadCount = 0;
-    document.getElementById('unread-badge').classList.remove('show');
-    document.getElementById('scroll-bottom-btn').classList.remove('show');
-  } else if (unreadCount > 0) {
-    document.getElementById('scroll-bottom-btn').classList.add('show');
-  }
-}
-
-// ─── AVATAR ──────────────────────────────────────────────────────────
-function makeAvatar(username, size = 36, radius = 10) {
-  const c = getColor(username);
-  const letter = (username || '?')[0].toUpperCase();
-  return `<div style="width:${size}px;height:${size}px;border-radius:${radius}px;background:${c};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.round(size/2.5)}px;color:#fff;flex-shrink:0">${letter}</div>`;
-}
-
-// ─── MESSAGES ────────────────────────────────────────────────────────
-function clearMessages() {
-  document.getElementById('messages-container').innerHTML = '';
-  document.getElementById('scroll-anchor').innerHTML = '';
-  lastMsgSender = '';
-}
-
-function appendMsg(data) {
-  const container = document.getElementById('messages-container');
-  const isOwn = data.username === currentUser;
-  const isCont = lastMsgSender === data.username;
-  lastMsgSender = data.username;
-
-  const div = document.createElement('div');
-  const content = esc(data.message || data.content || '');
-  const time = data.time || data.timestamp || '';
-
-  const reactBar = `<div class="msg-actions">
-    ${EMOJIS.slice(0,5).map(e => `<button class="msg-react-btn" title="Réagir" onclick="addReaction(this,'${e}')">${e}</button>`).join('')}
-    <button class="msg-copy-btn" title="Copier" onclick="copyMsg(this)">
-      <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/></svg>
-    </button>
-  </div>`;
-
-  if (isOwn) {
-    div.className = `msg-group${isCont ? '' : ' with-header'}`;
-    if (!isCont) {
-      div.innerHTML += `<div class="msg-header msg-header-own"><span class="msg-time">${esc(time)}</span><span class="msg-author" style="color:${getColor(currentUser)}">${esc(currentUser)}</span></div>`;
-    }
-    div.innerHTML += `<div class="msg-row msg-row-own" data-content="${content}">
-      ${reactBar}
-      <div class="msg-bubble msg-bubble-own ${isCont ? 'msg-bubble-cont-own' : ''}" data-full-time="${esc(time)}" title="${esc(time)}">${content}</div>
-      ${!isCont ? makeAvatar(currentUser) : `<div class="msg-avatar-spacer"></div>`}
-    </div>`;
-  } else {
-    div.className = `msg-group${isCont ? '' : ' with-header'}`;
-    if (!isCont) {
-      div.innerHTML += `<div class="msg-header"><span class="msg-author" style="color:${getColor(data.username)}">${esc(data.username)}</span><span class="msg-time">${esc(time)}</span></div>`;
-    }
-    div.innerHTML += `<div class="msg-row" data-content="${content}">
-      ${!isCont ? makeAvatar(data.username) : `<div class="msg-avatar-spacer"></div>`}
-      <div class="msg-bubble msg-bubble-other ${isCont ? 'msg-bubble-cont-other' : ''}" data-full-time="${esc(time)}" title="${esc(time)}">${content}</div>
-      ${reactBar}
-    </div>`;
-  }
-
-  div.style.opacity = '0';
-  div.style.transform = 'translateY(8px)';
-  container.appendChild(div);
-  requestAnimationFrame(() => {
-    div.style.transition = 'opacity .25s ease, transform .25s ease';
-    div.style.opacity = '1';
-    div.style.transform = 'translateY(0)';
-  });
-
-  if (isAtBottom) {
-    scrollToBottom();
-  } else {
-    unreadCount++;
-    const badge = document.getElementById('unread-badge');
-    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-    badge.classList.add('show');
-    document.getElementById('scroll-bottom-btn').classList.add('show');
-  }
-}
-
-function addReaction(btn, emoji) {
-  const row = btn.closest('.msg-row, .msg-row-own');
-  let reactions = row.querySelector('.reactions-bar');
-  if (!reactions) {
-    reactions = document.createElement('div');
-    reactions.className = 'reactions-bar';
-    reactions.style.cssText = 'display:flex;gap:4px;margin-top:4px;flex-wrap:wrap';
-    const bubble = row.querySelector('.msg-bubble');
-    bubble.insertAdjacentElement('afterend', reactions);
-  }
-  let found = [...reactions.querySelectorAll('.reaction-chip')].find(c => c.dataset.emoji === emoji);
-  if (found) {
-    const count = parseInt(found.querySelector('span').textContent) + 1;
-    found.querySelector('span').textContent = count;
-  } else {
-    const chip = document.createElement('div');
-    chip.dataset.emoji = emoji;
-    chip.className = 'reaction-chip';
-    chip.style.cssText = 'display:flex;align-items:center;gap:3px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:99px;padding:2px 8px;font-size:12px;cursor:pointer;transition:background .1s';
-    chip.innerHTML = `${emoji}<span>1</span>`;
-    chip.onclick = () => { const c = parseInt(chip.querySelector('span').textContent) + 1; chip.querySelector('span').textContent = c; };
-    reactions.appendChild(chip);
-  }
-}
-
-function copyMsg(btn) {
-  const row = btn.closest('[data-content]');
-  const text = row?.dataset.content || btn.closest('.msg-bubble')?.textContent || '';
-  navigator.clipboard.writeText(text).then(() => showToast('Message copié !'));
-}
-
-// ─── ROOM / DM SWITCH ────────────────────────────────────────────────
-function switchRoom(roomId) {
-  activeCtx = { type: 'room', id: roomId };
-  setActiveConv(`room-${roomId}`);
-  document.getElementById('header-icon').textContent = '#';
-  document.getElementById('header-icon').style.background = '';
-  document.getElementById('header-name').textContent = roomId;
-  document.getElementById('header-desc').textContent = 'Salon public NoSQL';
-  clearMessages();
-  const btn = document.getElementById('ctx-action-btn');
-  if (roomId === 'Général') { btn.style.display = 'none'; }
-  else {
-    btn.style.display = 'flex'; btn.textContent = 'Quitter';
-    btn.className = 'hdr-btn';
-    btn.style.color = 'var(--red)';
-    btn.onclick = () => socket.emit('leave_group', { username: currentUser, group_name: roomId });
-  }
-  socket.emit('join_room', { username: currentUser, room: roomId });
-}
-
-function openMP(peer) {
-  activeCtx = { type: 'pm', id: peer };
-  setActiveConv(`pm-${peer}`);
-  document.getElementById('header-icon').textContent = peer[0].toUpperCase();
-  document.getElementById('header-icon').style.background = getColor(peer);
-  document.getElementById('header-icon').style.color = '#fff';
-  document.getElementById('header-name').textContent = peer;
-  document.getElementById('header-desc').textContent = 'Discussion privée sécurisée';
-  clearMessages();
-  const btn = document.getElementById('ctx-action-btn');
-  btn.style.display = 'flex'; btn.textContent = 'Supprimer';
-  btn.className = 'hdr-btn';
-  btn.style.color = 'var(--red)';
-  btn.onclick = () => { if(confirm('Supprimer ce contact ?')) { socket.emit('remove_contact', { username: currentUser, contact: peer }); switchRoom('Général'); } };
-  const roomId = `pm:${[currentUser, peer].sort().join(':')}`;
-  socket.emit('join_room', { username: currentUser, room: roomId });
-}
-
-function setActiveConv(id) {
-  document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
-  const el = document.getElementById(`conv-${id}`);
-  if (el) { el.classList.add('active'); el.querySelector('.conv-badge')?.classList.remove('show'); }
-}
-
-// ─── SIDEBAR BUILD ────────────────────────────────────────────────────
-function buildSidebar(groups, contacts) {
-  const grpList = document.getElementById('groups-section');
-  const dmList = document.getElementById('dms-section');
-  grpList.innerHTML = '';
-  dmList.innerHTML = '';
-
-  groups.forEach(g => {
-    const li = document.createElement('li');
-    li.id = `conv-room-${g}`;
-    li.className = `conv-item${activeCtx.id === g && activeCtx.type === 'room' ? ' active' : ''}`;
-    li.onclick = () => switchRoom(g);
-    li.innerHTML = `<div class="conv-icon">#</div>
-      <div class="conv-info"><div class="conv-name">${esc(g)}</div></div>
-      <div class="conv-badge" id="badge-room-${esc(g)}"></div>`;
-    grpList.appendChild(li);
-  });
-
-  contacts.forEach(c => {
-    const li = document.createElement('li');
-    li.id = `conv-pm-${c}`;
-    li.className = `conv-item${activeCtx.id === c && activeCtx.type === 'pm' ? ' active' : ''}`;
-    li.onclick = () => openMP(c);
-    const online = onlineUsers.includes(c);
-    li.innerHTML = `<div style="position:relative">${makeAvatar(c)}${online ? '<div class="conv-online-dot" style="position:absolute;bottom:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);border:2px solid var(--surface)"></div>' : ''}</div>
-      <div class="conv-info"><div class="conv-name">${esc(c)}</div></div>
-      <div class="conv-badge" id="badge-pm-${esc(c)}"></div>`;
-    dmList.appendChild(li);
-  });
-}
-
-function filterConvs(q) {
-  document.querySelectorAll('.conv-item').forEach(el => {
-    const name = el.querySelector('.conv-name')?.textContent?.toLowerCase() || '';
-    el.style.display = name.includes(q.toLowerCase()) ? '' : 'none';
-  });
-}
-
-// ─── CONTEXT INFO ─────────────────────────────────────────────────────
-function openContextInfo() {
-  if (activeCtx.type === 'pm') { socket.emit('get_profile', { username: activeCtx.id }); }
-  else if (activeCtx.type === 'room' && activeCtx.id !== 'Général') { socket.emit('get_group_info', { group_name: activeCtx.id }); }
-}
-
-// ─── SEARCH ──────────────────────────────────────────────────────────
-function searchKw() { socket.emit('search_messages', { keyword: document.getElementById('search-kw').value.trim() }); }
-function searchTime() { socket.emit('search_messages', { time_range: { start: document.getElementById('search-t1').value, end: document.getElementById('search-t2').value } }); }
-
-// ─── USER SEARCH (suggestions) ───────────────────────────────────────
-function searchUsers(q, targetId) {
-  currentSuggTarget = targetId;
-  let query = q;
-  if (targetId === 'grp-sugg') { const parts = q.split(','); query = parts[parts.length - 1].trim(); }
-  if (query.length >= 1) { socket.emit('search_users', { query }); }
-  else { document.getElementById(targetId)?.classList.remove('show'); }
-}
-
-// ─── MY PROFILE ──────────────────────────────────────────────────────
-function openMyProfile() {
-  const av = document.getElementById('profile-avatar');
-  av.textContent = currentUser[0].toUpperCase();
-  av.style.background = getColor(currentUser);
-  openModal('profile-modal');
-}
-
-// ─── ADD GROUP MEMBER ────────────────────────────────────────────────
-function addGroupMember() {
-  const inp = document.getElementById('gi-add-input');
-  if (!inp.value.trim()) return;
-  socket.emit('add_group_members', { username: currentUser, group_name: document.getElementById('gi-name').textContent, members: [inp.value.trim()] });
-  inp.value = '';
-}
-
-// ─── KICK ────────────────────────────────────────────────────────────
-function kickMember(gn, target) {
-  if (confirm(`Exclure ${target} ?`)) socket.emit('kick_group_member', { username: currentUser, group_name: gn, target });
-}
-
-// ─── CONTEXT MENU ────────────────────────────────────────────────────
-let ctxTarget = null;
-document.addEventListener('contextmenu', e => {
-  const bubble = e.target.closest('.msg-bubble');
-  if (!bubble) return;
-  e.preventDefault();
-  ctxTarget = bubble;
-  ctxMsgContent = bubble.textContent;
-  const menu = document.getElementById('ctx-menu');
-  menu.style.display = 'block';
-  menu.style.left = `${Math.min(e.clientX, window.innerWidth - 160)}px`;
-  menu.style.top = `${Math.min(e.clientY, window.innerHeight - 60)}px`;
-});
-document.addEventListener('click', () => { document.getElementById('ctx-menu').style.display = 'none'; });
-function ctxCopy() { navigator.clipboard.writeText(ctxMsgContent).then(() => showToast('Copié !')); }
-
-// ─── STATS ANIMATION ─────────────────────────────────────────────────
-function animateCount(el, target, duration = 1200) {
-  let start = 0;
-  const step = target / (duration / 16);
-  const run = () => {
-    start = Math.min(start + step, target);
-    el.textContent = Math.floor(start).toLocaleString('fr-FR');
-    if (start < target) requestAnimationFrame(run);
-  };
-  requestAnimationFrame(run);
-}
-
-// ─── LOGOUT ──────────────────────────────────────────────────────────
-function logout() { location.reload(); }
-
-// ─── EMOJI INSERT ─────────────────────────────────────────────────────
-function insertEmoji() {
-  // Mini emoji picker
-  let picker = document.getElementById('emoji-picker');
-  if (picker) { picker.remove(); return; }
-  picker = document.createElement('div');
-  picker.id = 'emoji-picker';
-  picker.style.cssText = 'position:absolute;bottom:80px;left:20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px;display:flex;flex-wrap:wrap;gap:4px;box-shadow:0 10px 40px rgba(0,0,0,0.4);z-index:50;max-width:200px';
-  EMOJIS.forEach(e => {
-    const b = document.createElement('button');
-    b.textContent = e; b.style.cssText = 'width:32px;height:32px;border:none;background:transparent;font-size:18px;cursor:pointer;border-radius:6px;transition:background .1s';
-    b.onmouseover = () => b.style.background = 'rgba(255,255,255,0.1)';
-    b.onmouseout = () => b.style.background = 'transparent';
-    b.onclick = () => { const inp = document.getElementById('msg-input'); inp.value += e; inp.focus(); picker.remove(); };
-    picker.appendChild(b);
-  });
-  document.querySelector('.chat-area').style.position = 'relative';
-  document.querySelector('.chat-area').appendChild(picker);
-  setTimeout(() => document.addEventListener('click', () => picker.remove(), { once: true }), 100);
-}
-
-// ════════════════════════ SOCKET.IO EVENTS ═══════════════════════════
-
-socket.on('login_result', data => {
-  console.log("Login result received:", data);
-  const btn = document.getElementById('join-btn');
-  const sp = document.getElementById('auth-spinner');
-  if (btn) btn.disabled = false;
-  if (sp) sp.style.display = 'none';
-
-  if (data.success) {
-    currentUser = document.getElementById('username-input').value.trim();
-    console.log("Login success! Current User:", currentUser);
-
-    // 1. IMMEDIATE TRANSITION (High Priority)
-    const authScr = document.getElementById('auth-screen');
-    const mainApp = document.getElementById('main-app');
-    if (authScr) authScr.classList.add('hidden');
-    if (mainApp) mainApp.classList.remove('hidden');
-
-    // 2. OTHER UPDATES (Fail-safe)
-    try {
-        if (document.getElementById('remember-me')?.checked) {
-            localStorage.setItem('nexus_username', currentUser);
+        function toast(msg, ok = true) {
+            const tc = document.getElementById('tc');
+            const t = document.createElement('div'); t.className = 'tst';
+            t.innerHTML = `<svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="${ok ? 'tok' : 'terr'}"><path d="${ok ? 'M5 13l4 4L19 7' : 'M6 18L18 6M6 6l12 12'}" stroke-width="3"/></svg><span class="tmsg">${es(msg)}</span><button style="color:var(--muted);font-size:16px;line-height:1;padding:2px" onclick="this.parentElement.remove()">x</button>`;
+            tc.appendChild(t);
+            requestAnimationFrame(() => t.classList.add('show'));
+            setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 350) }, 4000);
         }
-        const nameEl = document.getElementById('my-username');
-        if (nameEl) nameEl.textContent = currentUser;
-        
-        const avMini = document.getElementById('my-avatar-mini');
-        if (avMini) {
-            avMini.textContent = currentUser[0].toUpperCase();
-            avMini.style.background = getColor(currentUser);
-            avMini.style.color = '#fff';
+
+        // LOGIN
+        function goS2() {
+            lu = document.getElementById('ui').value.trim();
+            if (!lu) { se1('Entrez votre nom d\'utilisateur'); return }
+            if (!/^[a-zA-Z0-9_\-]{1,20}$/.test(lu)) { se1('Lettres, chiffres, _ et - uniquement'); return }
+            he1();
+            const s1 = document.getElementById('s1'), s2 = document.getElementById('s2');
+            s1.classList.add('left'); s1.style.position = 'absolute';
+            s2.classList.remove('right'); s2.style.position = '';
+            document.getElementById('s2nm').textContent = lu;
+            const a = document.getElementById('s2av'); a.textContent = lu[0].toUpperCase(); a.style.background = gc(lu);
+            setTimeout(() => document.getElementById('pi').focus(), 60);
         }
-    } catch(e) { console.error("Non-critical UI error:", e); }
+        function goS1() {
+            const s1 = document.getElementById('s1'), s2 = document.getElementById('s2');
+            s1.classList.remove('left'); s1.style.position = '';
+            s2.classList.add('right'); s2.style.position = 'absolute';
+            he2(); setTimeout(() => document.getElementById('ui').focus(), 60);
+        }
+        function doLogin() {
+            const pw = document.getElementById('pi').value.trim();
+            if (!pw) { se2('Entrez votre mot de passe'); return }
+            he2();
+            document.getElementById('ll').style.display = 'flex';
+            document.getElementById('blg').disabled = true;
+            socket.connect(); socket.emit('connect_user', { username: lu, password: pw });
+        }
+        function se1(m) { const e = document.getElementById('e1'); e.style.display = 'flex'; document.getElementById('e1m').textContent = m }
+        function he1() { document.getElementById('e1').style.display = 'none' }
+        function se2(m) { const e = document.getElementById('e2'); e.style.display = 'flex'; document.getElementById('e2m').textContent = m }
+        function he2() { document.getElementById('e2').style.display = 'none' }
+        function tpw() { const i = document.getElementById('pi'); i.type = i.type === 'password' ? 'text' : 'password' }
 
-    try {
-        switchRoom('Général');
-        socket.emit('get_stats');
-        showToast(data.message);
-    } catch(e) { console.error("Context setup error:", e); }
-  } else {
-    const err = document.getElementById('login-error');
-    if (err) {
-        err.textContent = data.message;
-        err.style.display = 'block';
-    }
-    const cont = document.querySelector('.auth-container');
-    if (cont) {
-        cont.classList.add('shake');
-        setTimeout(() => cont.classList.remove('shake'), 500);
-    }
-    document.getElementById('password-input')?.focus();
-  }
-});
+        document.getElementById('ui').addEventListener('keydown', e => { if (e.key === 'Enter') goS2() });
+        document.getElementById('pi').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin() });
 
-socket.on('conversations_data', data => {
-  buildSidebar(data.groups || [], data.contacts || []);
-});
+        // SCROLL
+        function scDown(sm = true) { const a = document.getElementById('ma'); a.scrollTo({ top: a.scrollHeight, behavior: sm ? 'smooth' : 'instant' }); uc = 0; document.getElementById('ub').classList.remove('show'); document.getElementById('sbb').classList.remove('show'); iat = true }
+        function oScr() { const a = document.getElementById('ma'); iat = a.scrollHeight - a.scrollTop - a.clientHeight < 80; if (iat) { uc = 0; document.getElementById('ub').classList.remove('show'); document.getElementById('sbb').classList.remove('show') } else if (uc > 0) document.getElementById('sbb').classList.add('show') }
 
-socket.on('status_update', data => {
-  onlineUsers = data.users || [];
-  // Update online count in panel
-  document.getElementById('online-count').textContent = onlineUsers.length;
-  const list = document.getElementById('online-list');
-  list.innerHTML = onlineUsers.slice(0, 10).map(u => `
-    <div class="online-user-item">
-      ${makeAvatar(u, 30, 8)}
-      <span class="online-user-name">${esc(u)}</span>
-      ${u === currentUser ? '<span style="font-size:10px;color:var(--muted)">(moi)</span>' : ''}
-    </div>`).join('');
-});
+        // MESSAGES
+        function clrMsg() { document.getElementById('mc').innerHTML = ''; ls = '' }
 
-socket.on('new_msg', data => {
-  const currentRoom = activeCtx.type === 'room' ? activeCtx.id : `pm:${[currentUser, activeCtx.id].sort().join(':')}`;
-  if (data.room === currentRoom) {
-    appendMsg(data);
-    socket.emit('get_stats');
-  } else {
-    const key = data.room.startsWith('pm:')
-      ? `pm-${data.username === currentUser ? data.target : data.username}`
-      : `room-${data.room}`;
-    const badge = document.getElementById(`conv-${key}`)?.querySelector('.conv-badge');
-    if (badge) {
-      const n = parseInt(badge.textContent || '0') + 1;
-      badge.textContent = n; badge.classList.add('show');
-    }
-    showToast(`Nouveau message — ${data.room.startsWith('pm:') ? '@' + data.username : data.room}`);
-  }
-});
+        function aMsg(d) {
+            const ctr = document.getElementById('mc');
+            const isO = d.username === cu, isCt = ls === d.username;
+            ls = d.username;
+            const cnt = es(d.message || d.content || ''), tm = d.time || d.timestamp || '';
+            const div = document.createElement('div');
+            div.className = `mr ${isO ? 'out' : 'in'}${!isCt ? ' gap' : ''}`;
+            const tick = `<span class="tick"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="11" viewBox="0 0 16 11"><path d="M11.071.653l-5.77 7.573-2.84-2.614a.5.5 0 00-.69.717l3.236 2.98a.5.5 0 00.711-.054l6.063-7.958a.5.5 0 10-.71-.644zM15.328.653l-5.77 7.573-.71-.654 5.768-7.568a.5.5 0 01.712.649z" fill="#53bdeb"/></svg></span>`;
+            if (isO) {
+                div.innerHTML = `<div class="bbl out${!isCt ? ' tout' : ''}" data-c="${cnt}" title="${es(tm)}">${cnt}<span class="mm"><span class="mt">${es(tm)}</span>${tick}</span></div>`;
+            } else {
+                div.innerHTML = `<div style="display:flex;align-items:flex-end;gap:5px">${!isCt ? av(d.username, 30) : '<div style="width:30px;flex-shrink:0"></div>'}<div class="bbl in${!isCt ? ' tin' : ''}" data-c="${cnt}" title="${es(tm)}">${!isCt ? `<div class="snm" style="color:${gc(d.username)}">${es(d.username)}</div>` : ''}${cnt}<span class="mm"><span class="mt">${es(tm)}</span></span></div></div>`;
+            }
+            div.style.cssText = 'opacity:0;transform:translateY(5px)';
+            ctr.appendChild(div);
+            requestAnimationFrame(() => { div.style.transition = 'opacity .18s,transform .18s'; div.style.opacity = '1'; div.style.transform = 'none' });
+            if (iat) scDown();
+            else { uc++; const b = document.getElementById('ub'); b.textContent = uc > 99 ? '99+' : uc; b.classList.add('show'); document.getElementById('sbb').classList.add('show') }
+        }
 
-socket.on('room_history', data => {
-  data.history.forEach(m => appendMsg({ username: m.sender, message: m.content, time: m.timestamp }));
-});
+        // SIDEBAR
+        function bldSidebar(grps, cnts) {
+            const gl = document.getElementById('gl'), dl = document.getElementById('dl');
+            gl.innerHTML = ''; dl.innerHTML = '';
+            grps.forEach(g => {
+                const li = document.createElement('li');
+                li.id = `cr-${g}`; li.className = `ci${ctx.id === g && ctx.type === 'room' ? ' active' : ''}`; li.onclick = () => swRoom(g);
+                li.innerHTML = `<div class="ci-av-hash">#</div><div class="ci-info"><div class="ci-name">${es(g)}</div><div class="ci-prev">Salon de discussion</div></div><div class="ci-meta"><span class="ci-badge" id="br-${es(g)}"></span></div>`;
+                gl.appendChild(li);
+            });
+            cnts.forEach(c => {
+                const li = document.createElement('li');
+                li.id = `cd-${c}`; li.className = `ci${ctx.id === c && ctx.type === 'pm' ? ' active' : ''}`; li.onclick = () => opDM(c);
+                const on = ous.includes(c);
+                li.innerHTML = `<div style="position:relative">${av(c, 46)}<div style="position:absolute;bottom:1px;right:1px;width:10px;height:10px;border-radius:50%;background:${on ? 'var(--green)' : '#ccc'};border:2px solid #fff"></div></div><div class="ci-info"><div class="ci-name">${es(c)}</div><div class="ci-prev">${on ? 'En ligne' : 'Hors ligne'}</div></div><div class="ci-meta"><span class="ci-badge" id="bd-${es(c)}"></span></div>`;
+                dl.appendChild(li);
+            });
+        }
+        function fcv(q) { document.querySelectorAll('.ci').forEach(el => { const n = el.querySelector('.ci-name')?.textContent?.toLowerCase() || ''; el.style.display = n.includes(q.toLowerCase()) ? '' : 'none' }) }
+        function sAct(id) { document.querySelectorAll('.ci').forEach(el => el.classList.remove('active')); document.getElementById(id)?.classList.add('active') }
 
-socket.on('stats_data', data => {
-  // Total counter
-  const totalEl = document.getElementById('total-msgs');
-  animateCount(totalEl, data.total_messages || 0);
+        function swRoom(r) {
+            ctx = { type: 'room', id: r }; sAct(`cr-${r}`);
+            document.getElementById('chav').textContent = '#'; document.getElementById('chav').style.background = 'var(--h2)';
+            document.getElementById('chnm').textContent = r; document.getElementById('chdc').textContent = 'Salon public \u2022 synchronis\u00e9 Redis/TCP';
+            clrMsg();
+            const b = document.getElementById('cab');
+            if (r === 'G\u00e9n\u00e9ral' || r === 'General' || r === 'Général') { b.style.display = 'none' }
+            else { b.style.display = 'flex'; b.onclick = () => socket.emit('leave_group', { username: cu, group_name: r }) }
+            socket.emit('join_room', { username: cu, room: r });
+            document.getElementById(`br-${r}`)?.classList.remove('show');
+        }
+        function opDM(p) {
+            ctx = { type: 'pm', id: p }; sAct(`cd-${p}`);
+            const a = document.getElementById('chav'); a.textContent = p[0].toUpperCase(); a.style.background = gc(p);
+            document.getElementById('chnm').textContent = p; document.getElementById('chdc').textContent = 'Discussion priv\u00e9e';
+            clrMsg();
+            const b = document.getElementById('cab'); b.style.display = 'flex'; b.onclick = () => { socket.emit('remove_contact', { username: cu, contact: p }); swRoom('G\u00e9n\u00e9ral') };
+            socket.emit('join_room', { username: cu, room: `pm:${[cu, p].sort().join(':')}` });
+            document.getElementById(`bd-${p}`)?.classList.remove('show');
+        }
 
-  // Top senders bars
-  const maxCount = Math.max(...(data.top_senders || []).map(s => s.count), 1);
-  document.getElementById('top-senders').innerHTML = (data.top_senders || []).map((s, i) => {
-    const pct = Math.round((s.count / maxCount) * 100);
-    const color = ['#7c5cfc','#00d2ff','#10b981','#f59e0b','#ef4444'][i % 5];
-    return `<div class="stat-bar-row">
-      <div class="stat-bar-header">
-        <div class="stat-bar-name">${esc(s._id)}</div>
-        <div class="stat-bar-count">${s.count} msgs</div>
-      </div>
-      <div class="stat-bar-track">
-        <div class="stat-bar-fill" style="background:${color}" data-target="${pct}"></div>
-      </div>
-    </div>`;
-  }).join('');
+        let spOpen = false;
+        function togStats() { spOpen = !spOpen; document.getElementById('sp').classList.toggle('open', spOpen); if (spOpen) socket.emit('get_stats') }
 
-  // Animate bars after render
-  requestAnimationFrame(() => {
-    document.querySelectorAll('.stat-bar-fill').forEach((bar, i) => {
-      setTimeout(() => { bar.style.width = bar.dataset.target + '%'; }, i * 80);
-    });
-  });
+        function oCtxI() { if (ctx.type === 'pm') socket.emit('get_profile', { username: ctx.id }); else if (ctx.type === 'room' && ctx.id !== 'G\u00e9n\u00e9ral') socket.emit('get_group_info', { group_name: ctx.id }) }
+        function oMyP() { const a = document.getElementById('pav'); a.textContent = cu[0].toUpperCase(); a.style.background = gc(cu); oM('m-p') }
 
-  // Most solicited
-  document.getElementById('most-solicited').innerHTML = (data.most_solicited || []).map((s, i) => `
-    <div class="solicited-item">
-      <div class="sol-rank">${i + 1}</div>
-      ${makeAvatar(s._id, 28, 8)}
-      <span class="sol-name">${esc(s._id)}</span>
-      <span class="sol-count">${s.count} reçus</span>
-    </div>`).join('');
-});
+        function dSK() { socket.emit('search_messages', { keyword: document.getElementById('ski').value.trim() }) }
+        function dST() { socket.emit('search_messages', { time_range: { start: document.getElementById('st1').value, end: document.getElementById('st2').value } }) }
 
-socket.on('search_messages_results', data => {
-  const kw = document.getElementById('search-kw').value.trim();
-  const list = document.getElementById('search-results-list');
-  if (!data.results.length) {
-    list.innerHTML = '<p style="text-align:center;color:var(--dim);font-size:13px;padding:40px 0">Aucun résultat trouvé.</p>';
-    return;
-  }
-  list.innerHTML = data.results.map(msg => {
-    let content = esc(msg.content);
-    if (kw) { const rx = new RegExp(`(${kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'); content = content.replace(rx, '<span class="search-highlight">$1</span>'); }
-    return `<div class="search-result-card">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:6px">${makeAvatar(msg.sender, 22, 6)}<span style="font-size:12px;font-weight:600">${esc(msg.sender)}</span><span style="font-size:11px;color:var(--muted)">@ ${esc(msg.room)}</span></div>
-        <span style="font-size:11px;color:var(--dim)">${esc(msg.timestamp)}</span>
-      </div>
-      <div style="font-size:13px;line-height:1.6">${content}</div>
-    </div>`;
-  }).join('');
-});
+        function sU(q, tid) {
+            st = tid; let qr = q;
+            if (tid === 'gms') { const p = q.split(','); qr = p[p.length - 1].trim() }
+            if (qr.length >= 1) socket.emit('search_users', { query: qr });
+            else document.getElementById(tid)?.classList.remove('show');
+        }
 
-socket.on('search_results', data => {
-  if (!currentSuggTarget) return;
-  const ul = document.getElementById(currentSuggTarget);
-  if (!ul) return;
-  ul.innerHTML = '';
-  const results = (data.results || []).filter(u => u !== currentUser);
-  if (results.length) {
-    ul.classList.add('show');
-    results.forEach(user => {
-      const li = document.createElement('div');
-      li.className = 'suggestion-item';
-      li.innerHTML = `${makeAvatar(user, 24, 7)}<span>${esc(user)}</span>`;
-      li.onclick = () => {
-        const inputId = currentSuggTarget === 'contact-sugg' ? 'contact-input' : 'grp-members';
-        const inp = document.getElementById(inputId);
-        if (inputId === 'grp-members') { const parts = inp.value.split(','); parts.pop(); parts.push(user); inp.value = parts.join(', ') + ', '; }
-        else { inp.value = user; }
-        ul.classList.remove('show');
-      };
-      ul.appendChild(li);
-    });
-  } else { ul.classList.remove('show'); }
-});
+        function aGM() { const i = document.getElementById('giai'); if (!i.value.trim()) return; socket.emit('add_group_members', { username: cu, group_name: document.getElementById('git').textContent, members: [i.value.trim()] }); i.value = '' }
+        function kMbr(gn, t) { if (confirm('Exclure ' + t + ' ?')) socket.emit('kick_group_member', { username: cu, group_name: gn, target: t }) }
 
-socket.on('notification', data => {
-  showToast(data.message, data.success);
-  if (data.success) {
-    ['add-contact-modal','create-group-modal'].forEach(id => closeModal(id));
-  }
-});
+        // Context menu
+        let ctxEl = null;
+        document.addEventListener('contextmenu', e => { const b = e.target.closest('[data-c]'); if (!b) return; e.preventDefault(); ctxEl = b; ctxc = b.dataset.c; const m = document.getElementById('ctx'); m.style.display = 'block'; m.style.left = `${Math.min(e.clientX, innerWidth - 155)}px`; m.style.top = `${Math.min(e.clientY, innerHeight - 80)}px` });
+        document.addEventListener('click', () => document.getElementById('ctx').style.display = 'none');
+        function ctxCopy() { navigator.clipboard.writeText(ctxc).then(() => toast('Copi\u00e9 !')) }
+        function ctxReply() { const i = document.getElementById('mi'); i.value = `> ${ctxc.substring(0, 40)}\u2026\n`; i.focus() }
 
-socket.on('profile_data', data => {
-  document.getElementById('ci-name').textContent = data.username;
-  const av = document.getElementById('ci-avatar');
-  av.textContent = data.username[0].toUpperCase();
-  av.style.background = getColor(data.username);
-  const isOnline = onlineUsers.includes(data.username);
-  document.getElementById('ci-online-badge').innerHTML = isOnline
-    ? '<span style="color:#2563eb;font-weight:600">● En ligne</span>'
-    : '<span style="color:#667781">● Hors ligne</span>';
-  document.getElementById('ci-bio').textContent = data.bio || "Salut ! J'utilise Nexus Chat.";
-  openModal('contact-info-modal');
-});
+        // Emoji
+        let ebOpen = false;
+        function togEmoji() {
+            ebOpen = !ebOpen; const bar = document.getElementById('eb'); bar.style.display = ebOpen ? 'flex' : 'none';
+            if (ebOpen && !bar.dataset.built) { bar.dataset.built = '1'; EM.forEach(e => { const b = document.createElement('button'); b.textContent = e; b.style.cssText = 'width:32px;height:32px;border:none;background:transparent;font-size:18px;cursor:pointer;border-radius:5px;transition:background .1s'; b.onmouseover = () => b.style.background = 'rgba(0,0,0,.07)'; b.onmouseout = () => b.style.background = 'transparent'; b.onclick = () => { const i = document.getElementById('mi'); i.value += e; i.focus() }; bar.appendChild(b) }) }
+        }
 
-socket.on('group_info_data', data => {
-  document.getElementById('gi-name').textContent = data._id;
-  document.getElementById('gi-creator').textContent = data.creator;
-  document.getElementById('gi-count').textContent = data.members.length;
-  const isAdmin = currentUser === data.creator;
-  document.getElementById('gi-admin-tools').style.display = isAdmin ? 'block' : 'none';
-  document.getElementById('gi-members').innerHTML = (data.members || []).map(m => {
-    const isCreator = m === data.creator;
-    return `<div class="member-row">
-      ${makeAvatar(m, 28, 7)}
-      <span class="member-name">${esc(m)}</span>
-      ${isCreator ? '<span class="admin-tag">ADMIN</span>' : ''}
-      ${isAdmin && !isCreator ? `<button class="kick-btn" onclick="kickMember('${esc(data._id)}','${esc(m)}')">Exclure</button>` : ''}
-    </div>`;
-  }).join('');
-  openModal('group-info-modal');
-});
+        // Send
+        function snd() {
+            const i = document.getElementById('mi'), msg = i.value.trim();
+            if (!msg || !cu) return;
+            const pm = ctx.type === 'pm';
+            socket.emit('send_message', { username: cu, message: msg, room: pm ? `pm:${[cu, ctx.id].sort().join(':')}` : `${ctx.id}`, is_private: pm, target: pm ? ctx.id : null });
+            i.value = ''; i.style.height = 'auto';
+            socket.emit('stop_typing', { username: cu, room: ctx.id });
+        }
+        document.getElementById('mi').addEventListener('input', function () {
+            this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+            const r = ctx.type === 'room' ? ctx.id : `pm:${[cu, ctx.id].sort().join(':')}`;
+            socket.emit('typing', { username: cu, room: r });
+            clearTimeout(window._tt); window._tt = setTimeout(() => socket.emit('stop_typing', { username: cu, room: r }), 2000);
+        });
+        document.getElementById('mi').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); snd() } });
+        document.getElementById('sb').addEventListener('click', snd);
 
-socket.on('display_typing', data => {
-  const room = activeCtx.type === 'room' ? activeCtx.id : `pm:${[currentUser, activeCtx.id].sort().join(':')}`;
-  if (data.room === room && data.username !== currentUser) {
-    document.getElementById('typing-text').textContent = `${data.username} rédige…`;
-    document.getElementById('typing-bar').classList.add('show');
-  }
-});
-socket.on('hide_typing', () => document.getElementById('typing-bar').classList.remove('show'));
+        // Modal actions
+        document.getElementById('bsb').addEventListener('click', () => { socket.emit('update_profile', { username: cu, bio: document.getElementById('bioi').value.trim() }); cM('m-p'); toast('Profil mis \u00e0 jour !') });
+        document.getElementById('badd').addEventListener('click', () => { const c = document.getElementById('aci').value.trim(); if (c) socket.emit('add_contact', { username: cu, contact: c }) });
+        document.getElementById('bcg').addEventListener('click', () => { const n = document.getElementById('gni').value.trim(); const m = document.getElementById('gmi').value.split(',').map(s => s.trim()).filter(Boolean); if (n) socket.emit('create_group', { username: cu, group_name: n, members: m }) });
 
-socket.on('group_members_updated', data => {
-  if (activeCtx.id === data.group_name) socket.emit('get_group_info', { group_name: data.group_name });
-});
-socket.on('kicked_from_group', data => {
-  if (activeCtx.id === data.group_name) { switchRoom('Général'); showToast('Vous avez été exclu du groupe.', false); }
-});
+        // Counter anim
+        function animN(el, t, d = 1100) { let n = 0; const s = t / (d / 16); const f = () => { n = Math.min(n + s, t); el.textContent = Math.floor(n).toLocaleString('fr-FR'); if (n < t) requestAnimationFrame(f) }; requestAnimationFrame(f) }
 
-// ─── INPUT HANDLING ──────────────────────────────────────────────────
-const msgInput = document.getElementById('msg-input');
+        function logout() { location.reload() }
 
-msgInput.addEventListener('input', () => {
-  msgInput.style.height = 'auto';
-  msgInput.style.height = Math.min(msgInput.scrollHeight, 150) + 'px';
-  const room = activeCtx.type === 'room' ? activeCtx.id : `pm:${[currentUser, activeCtx.id].sort().join(':')}`;
-  socket.emit('typing', { username: currentUser, room });
-  clearTimeout(window._typingTimer);
-  window._typingTimer = setTimeout(() => socket.emit('stop_typing', { username: currentUser, room }), 2000);
-});
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.mb:not(.hidden)').forEach(m => m.classList.add('hidden')) });
+        document.addEventListener('click', e => { if (!e.target.closest('[oninput]')) document.querySelectorAll('.sl').forEach(el => el.classList.remove('show')) });
 
-msgInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-});
+        // ═══ SOCKET EVENTS ═══
+        socket.on('login_result', d => {
+            document.getElementById('ll').style.display = 'none';
+            document.getElementById('blg').disabled = false;
+            if (d.success) {
+                cu = lu;
+                const c = gc(cu), l = cu[0].toUpperCase();
+                ['hav', 'fav'].forEach(id => { const el = document.getElementById(id); el.textContent = l; el.style.background = c });
+                document.getElementById('fnm').textContent = cu;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+                swRoom('G\u00e9n\u00e9ral');
+                socket.emit('get_stats');
+                toast(d.message);
+            } else {
+                se2(d.message || 'Erreur d\'authentification'); socket.disconnect();
+            }
+        });
 
-document.getElementById('send-btn').addEventListener('click', sendMessage);
+        socket.on('conversations_data', d => bldSidebar(d.groups || [], d.contacts || []));
 
-function sendMessage() {
-  const msg = msgInput.value.trim();
-  if (!msg || !currentUser) return;
-  const isPM = activeCtx.type === 'pm';
-  socket.emit('send_message', {
-    username: currentUser, message: msg,
-    room: isPM ? `pm:${[currentUser, activeCtx.id].sort().join(':')}` : activeCtx.id,
-    is_private: isPM, target: isPM ? activeCtx.id : null
-  });
-  msgInput.value = '';
-  msgInput.style.height = 'auto';
-  socket.emit('stop_typing', { username: currentUser, room: activeCtx.id });
-}
+        socket.on('status_update', d => {
+            ous = d.users || [];
+            document.getElementById('ocnt').textContent = ous.length;
+            document.getElementById('oul').innerHTML = ous.slice(0, 10).map(u => `<div class="oi">${av(u, 30)}<span class="oname">${es(u)}</span><div class="odot"></div></div>`).join('');
+        });
 
-// ─── LOGIN ────────────────────────────────────────────────────────────
-document.getElementById('join-btn').addEventListener('click', () => {
-  const u = document.getElementById('username-input').value.trim();
-  const p = document.getElementById('password-input').value.trim();
-  if (!u || !p) return;
-  
-  const btn = document.getElementById('join-btn');
-  const sp = document.getElementById('auth-spinner');
-  btn.disabled = true;
-  sp.style.display = 'block';
-  document.getElementById('login-error').style.display = 'none';
-  
-  socket.connect();
-  socket.emit('connect_user', { username: u, password: p });
-});
+        socket.on('new_msg', d => {
+            const cr = ctx.type === 'room' ? ctx.id : `pm:${[cu, ctx.id].sort().join(':')}`;
+            if (d.room === cr) { aMsg(d); socket.emit('get_stats') }
+            else {
+                const k = d.room.startsWith('pm:') ? `bd-${d.username === cu ? d.target : d.username}` : `br-${d.room}`;
+                const b = document.getElementById(k);
+                if (b) { const n = parseInt(b.textContent || '0') + 1; b.textContent = n; b.classList.add('show') }
+                toast(`Nouveau message \u2014 ${d.room.startsWith('pm:') ? '@' + d.username : d.room}`);
+            }
+        });
 
-document.getElementById('password-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('join-btn').click(); });
-document.getElementById('username-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('password-input').focus(); });
+        socket.on('room_history', d => d.history.forEach(m => aMsg({ username: m.sender, message: m.content, time: m.timestamp })));
 
-// ─── MODALS ACTIONS ───────────────────────────────────────────────────
-document.getElementById('save-bio-btn').addEventListener('click', () => {
-  socket.emit('update_profile', { username: currentUser, bio: document.getElementById('bio-input').value.trim() });
-  closeModal('profile-modal');
-  showToast('Profil mis à jour !');
-});
+        socket.on('stats_data', d => {
+            animN(document.getElementById('tnm'), d.total_messages || 0);
+            const mx = Math.max(...(d.top_senders || []).map(s => s.count), 1);
+            document.getElementById('tsl').innerHTML = (d.top_senders || []).map((s, i) => {
+                const p = Math.round(s.count / mx * 100);
+                const cls = ['#25D366', '#128C7E', '#075E54', '#00BFA5', '#0097A7'][i % 5];
+                return `<div class="sbr"><div class="sbt"><span class="sbn">${es(s._id)}</span><span class="sbc">${s.count} msgs</span></div><div class="sbk"><div class="sbf" style="background:${cls}" data-t="${p}"></div></div></div>`;
+            }).join('');
+            requestAnimationFrame(() => document.querySelectorAll('.sbf').forEach((b, i) => setTimeout(() => b.style.width = b.dataset.t + '%', i * 80)));
+            document.getElementById('msl').innerHTML = (d.most_solicited || []).map((s, i) => `<div class="sor"><div class="srk">${i + 1}</div>${av(s._id, 26)}<span class="sname">${es(s._id)}</span><span class="scnt">${s.count}</span></div>`).join('');
+        });
 
-document.getElementById('add-contact-btn').addEventListener('click', () => {
-  const c = document.getElementById('contact-input').value.trim();
-  if (!c) return;
-  socket.emit('add_contact', { username: currentUser, contact: c });
-});
+        socket.on('search_messages_results', d => {
+            const kw = document.getElementById('ski').value.trim();
+            const body = document.getElementById('srb');
+            if (!d.results.length) { body.innerHTML = '<p style="text-align:center;color:var(--muted);font-size:13px;padding:36px 0">Aucun r\u00e9sultat.</p>'; return }
+            body.innerHTML = d.results.map(m => { let c = es(m.content); if (kw) { const rx = new RegExp(`(${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'); c = c.replace(rx, '<span class="sh">$1</span>') } return `<div class="src"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><div style="display:flex;align-items:center;gap:5px">${av(m.sender, 22)}<span style="font-size:12px;font-weight:600">${es(m.sender)}</span><span style="font-size:11px;color:var(--muted)">@ ${es(m.room)}</span></div><span style="font-size:11px;color:var(--muted)">${es(m.timestamp)}</span></div><div style="font-size:13px;line-height:1.6">${c}</div></div>` }).join('');
+        });
 
-document.getElementById('create-grp-btn').addEventListener('click', () => {
-  const name = document.getElementById('grp-name').value.trim();
-  const members = document.getElementById('grp-members').value.split(',').map(m => m.trim()).filter(Boolean);
-  if (!name) return;
-  socket.emit('create_group', { username: currentUser, group_name: name, members });
-});
+        socket.on('search_results', d => {
+            if (!st) return; const ul = document.getElementById(st); if (!ul) return; ul.innerHTML = '';
+            const res = (d.results || []).filter(u => u !== cu);
+            if (res.length) { ul.classList.add('show'); res.forEach(u => { const li = document.createElement('div'); li.className = 'si'; li.innerHTML = `${av(u, 26)}<span>${es(u)}</span>`; li.onclick = () => { const iid = st === 'acs' ? 'aci' : 'gmi'; const i = document.getElementById(iid); if (iid === 'gmi') { const p = i.value.split(','); p.pop(); p.push(u); i.value = p.join(', ') + ', ' } else i.value = u; ul.classList.remove('show') }; ul.appendChild(li) }) }
+            else ul.classList.remove('show');
+        });
 
-// Close dropdowns on outside click
-document.addEventListener('click', e => {
-  if (!e.target.closest('[oninput]')) {
-    document.querySelectorAll('.suggestions-list').forEach(el => el.classList.remove('show'));
-  }
-});
+        socket.on('notification', d => { toast(d.message, d.success); if (d.success) { ['m-ac', 'm-cg'].forEach(cM) } });
 
-// ─── KEYBOARD SHORTCUT: ESC closes modals ─────────────────────────────
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => m.classList.add('hidden'));
-    document.getElementById('ctx-menu').style.display = 'none';
-  }
-});
+        socket.on('profile_data', d => {
+            const a = document.getElementById('ciav'); a.textContent = d.username[0].toUpperCase(); a.style.background = gc(d.username);
+            document.getElementById('cinm').textContent = d.username;
+            const on = ous.includes(d.username);
+            document.getElementById('cist').innerHTML = `<span style="color:${on ? 'var(--green)' : 'var(--muted)'}">\u25cf ${on ? 'En ligne' : 'Hors ligne'}</span>`;
+            document.getElementById('cibi').textContent = d.bio || "Salut ! J'utilise Nexus Chat.";
+            oM('m-ci');
+        });
 
-// ─── INIT ─────────────────────────────────────────────────────────────
-window.addEventListener('load', () => {
-  // Load remembered user
-  const saved = localStorage.getItem('nexus_username');
-  if (saved) {
-    document.getElementById('username-input').value = saved;
-    setTimeout(() => document.getElementById('password-input').focus(), 300);
-  } else {
-    setTimeout(() => document.getElementById('username-input').focus(), 300);
-  }
-});
-</script>
+        socket.on('group_info_data', d => {
+            document.getElementById('git').textContent = d._id;
+            document.getElementById('gicr').textContent = d.creator;
+            document.getElementById('gicnt').textContent = d.members.length;
+            const adm = cu === d.creator;
+            document.getElementById('giat').style.display = adm ? 'block' : 'none';
+            document.getElementById('giml').innerHTML = (d.members || []).map(m => `<div class="mrow">${av(m, 32)}<span class="mrow-name">${es(m)}</span>${m === d.creator ? '<span class="abadge">Admin</span>' : ''}${adm && m !== d.creator ? `<button class="kbtn" onclick="kMbr('${es(d._id)}','${es(m)}')">Exclure</button>` : ''}</div>`).join('');
+            oM('m-gi');
+        });
+
+        socket.on('display_typing', d => {
+            const r = ctx.type === 'room' ? ctx.id : `pm:${[cu, ctx.id].sort().join(':')}`;
+            if (d.room === r && d.username !== cu) { document.getElementById('twho').textContent = d.username + ' est en train d\'\u00e9crire\u2026'; document.getElementById('tbw').classList.add('show') }
+        });
+        socket.on('hide_typing', () => document.getElementById('tbw').classList.remove('show'));
+        socket.on('group_members_updated', d => { if (ctx.id === d.group_name) socket.emit('get_group_info', { group_name: d.group_name }) });
+        socket.on('kicked_from_group', d => { if (ctx.id === d.group_name) { swRoom('G\u00e9n\u00e9ral'); toast('Vous avez \u00e9t\u00e9 exclu du groupe.', false) } });
+
+        window.addEventListener('load', () => setTimeout(() => document.getElementById('ui').focus(), 200));
+    </script>
 </body>
+
 </html>
