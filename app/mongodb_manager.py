@@ -113,19 +113,21 @@ class MongoManager:
     # ------------------------------------------------------------------
 
     def register_or_login(self, username, password):
-        """Authentification avec hashing bcrypt."""
+        """Authentification unifiée intelligente."""
         try:
             user = self.users.find_one({"_id": username})
             if user:
                 stored_password = user.get("password")
                 if not stored_password:
+                    # Cas rare d'un utilisateur sans mot de passe (migration?)
                     hashed = generate_password_hash(password)
                     self.users.update_one({"_id": username}, {"$set": {"password": hashed}})
                     return True, "Mot de passe configuré."
+                
                 if check_password_hash(stored_password, password):
                     return True, "Connexion réussie."
                 else:
-                    return False, "Mot de passe incorrect."
+                    return False, f"Le pseudo '{username}' est déjà pris. Si c'est vous, vérifiez votre mot de passe."
             else:
                 hashed = generate_password_hash(password)
                 self.users.insert_one({
@@ -133,12 +135,12 @@ class MongoManager:
                     "password": hashed,
                     "contacts": [],
                     "groups": ["Général"],
-                    "bio": "Salut ! J'utilise ChatPro."
+                    "bio": "Salut ! J'utilise Nexus Chat."
                 })
-                return True, "Compte créé."
+                return True, "Nouveau compte créé ! Bienvenue."
         except Exception as e:
             print(f"❌ Erreur Mongo (auth) : {e}")
-            return False, "Erreur interne serveur."
+            return False, "Erreur serveur. Veuillez réessayer."
 
     def get_user_info(self, username):
         user = self.users.find_one({"_id": username})

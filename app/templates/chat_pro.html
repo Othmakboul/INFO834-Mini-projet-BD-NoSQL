@@ -3,32 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nexus — NoSQL Chat Engine</title>
+<title>Nexus — WhatsApp Edition</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.js"></script>
 <style>
 :root {
-  --bg:        #06060f;
-  --surface:   #0d0d1c;
-  --card:      #12121f;
-  --card2:     #18182a;
-  --border:    rgba(255,255,255,0.07);
-  --border2:   rgba(255,255,255,0.04);
-  --primary:   #7c5cfc;
-  --primary-d: #5e3fd6;
-  --primary-g: rgba(124,92,252,0.25);
-  --cyan:      #00d2ff;
-  --green:     #00e676;
-  --red:       #ff4757;
-  --text:      #e8e8ff;
-  --muted:     rgba(232,232,255,0.45);
-  --dim:       rgba(232,232,255,0.2);
-  --sidebar-w: 272px;
-  --panel-w:   310px;
+  --wa-green:     #25D366;
+  --wa-dark-green:#075E54;
+  --wa-teal:      #128C7E;
+  --wa-bg:        #f0f2f5;
+  --wa-chat-bg:   #efe7dd;
+  --wa-bubble-in: #ffffff;
+  --wa-bubble-out:#dcf8c6;
+  --wa-header:    #ededed;
+  
+  --bg:        var(--wa-bg);
+  --surface:   #ffffff;
+  --card:      #ffffff;
+  --card2:     #f0f2f5;
+  --border:    #e0e0e0;
+  --border2:   #f2f2f2;
+  --primary:   var(--wa-teal);
+  --primary-d: var(--wa-dark-green);
+  --primary-g: rgba(18, 140, 126, 0.1);
+  --cyan:      #34b7f1;
+  --green:     var(--wa-green);
+  --red:       #ea0038;
+  --text:      #111b21;
+  --muted:     #667781;
+  --dim:       #8696a0;
+  --sidebar-w: 400px;
+  --panel-w:   300px;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
+.hidden { display: none !important; }
 
 body {
   font-family:'Inter',sans-serif;
@@ -39,42 +49,35 @@ body {
 /* ─── SCROLLBAR ─── */
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(124,92,252,0.25);border-radius:99px}
-::-webkit-scrollbar-thumb:hover{background:rgba(124,92,252,0.5)}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.1);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,0.2)}
 
-/* ─── BACKGROUND ORBS ─── */
-.orb{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;opacity:.55}
-.orb-1{width:600px;height:600px;background:radial-gradient(circle,#3d1faa,transparent);top:-200px;left:-200px;animation:drift1 18s ease-in-out infinite}
-.orb-2{width:500px;height:500px;background:radial-gradient(circle,#0b3f7a,transparent);bottom:-150px;right:-150px;animation:drift2 22s ease-in-out infinite}
-.orb-3{width:350px;height:350px;background:radial-gradient(circle,#00607a,transparent);bottom:20%;left:35%;animation:drift3 26s ease-in-out infinite}
-@keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,40px)}}
-@keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,-40px)}}
-@keyframes drift3{0%,100%{transform:translate(0,0)}33%{transform:translate(-30px,50px)}66%{transform:translate(40px,-20px)}}
+/* ─── REMOVED ORBS ─── */
+.orb { display: none; }
 
-/* ─── GLASS ─── */
+/* ─── FLAT DESIGN ─── */
 .glass{
-  background:rgba(13,13,28,0.75);
-  backdrop-filter:blur(28px) saturate(160%);
-  border:1px solid var(--border);
+  background:var(--surface);
+  border:none;
 }
-.glass-card{
-  background:var(--card);
-  border:1px solid var(--border2);
-  transition:background .2s,border-color .2s,transform .15s;
-}
-.glass-card:hover{background:var(--card2);border-color:rgba(124,92,252,0.25)}
+.border-r { border-right: 1px solid var(--border); }
+.border-l { border-left: 1px solid var(--border); }
 
 /* ─── LAYOUT ─── */
 .app{
-  position:relative;z-index:1;
-  display:grid;
-  grid-template-columns:var(--sidebar-w) 1fr var(--panel-w);
+  display:flex;
   height:100vh;
-  gap:10px;
-  padding:10px;
+  background:var(--bg);
+  max-width: 1600px;
+  margin: 0 auto;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.05);
 }
-@media(max-width:1280px){.app{grid-template-columns:var(--sidebar-w) 1fr;}.right-panel{display:none!important}}
-@media(max-width:768px){.app{grid-template-columns:1fr;}.sidebar{display:none!important}}
+.sidebar { width: var(--sidebar-w); flex-shrink: 0; background: #fff; border-right: 1px solid var(--border); }
+.chat-area { flex: 1; display: flex; flex-direction: column; background: #efe7dd; position: relative; }
+.right-panel { width: var(--panel-w); flex-shrink: 0; background: #fff; border-left: 1px solid var(--border); }
+
+@media(max-width:1400px){.right-panel{display:none!important}}
+@media(max-width:900px){.sidebar{width:100%!important;}.chat-area,.right-panel{display:none!important}}
 
 /* ─── SIDEBAR ─── */
 .sidebar{
@@ -83,21 +86,19 @@ body {
 }
 
 .sidebar-logo{
-  padding:20px 18px 12px;
-  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:#ededed;
   border-bottom:1px solid var(--border);
 }
 .logo-icon{
-  width:38px;height:38px;border-radius:12px;
-  background:linear-gradient(135deg,var(--primary),#a855f7);
+  width:40px;height:40px;border-radius:50%;
+  background:var(--wa-green);
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 0 20px var(--primary-g);
   flex-shrink:0;
 }
-.logo-icon svg{width:20px;height:20px;color:#fff}
-.logo-name{font-family:'Plus Jakarta Sans',sans-serif;font-weight:800;font-size:18px;letter-spacing:-.3px}
-.logo-name span{background:linear-gradient(90deg,var(--primary),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.logo-badge{font-size:9px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);display:block;margin-top:-2px}
+.logo-name{font-weight:700;font-size:16px;color:#3b4a54}
+.logo-badge{display:none}
 
 .sidebar-search{padding:10px 14px}
 .sidebar-search input{
@@ -121,15 +122,14 @@ body {
 .section-list{list-style:none}
 
 .conv-item{
-  display:flex;align-items:center;gap:10px;
-  padding:7px 10px;border-radius:10px;
-  cursor:pointer;transition:background .15s,border-color .15s;
-  border:1px solid transparent;position:relative;
-  margin-bottom:2px;
+  display:flex;align-items:center;gap:15px;
+  padding:12px 16px;
+  cursor:pointer;transition:background .1s;
+  border-bottom:1px solid #f2f2f2;
 }
-.conv-item:hover{background:rgba(255,255,255,0.05)}
-.conv-item.active{background:rgba(124,92,252,0.12);border-color:rgba(124,92,252,0.3)}
-.conv-item.active .conv-name{color:var(--text);font-weight:600}
+.conv-item:hover{background:#f5f6f6}
+.conv-item.active{background:#ebebeb}
+.conv-item.active .conv-name{color:#000;font-weight:600}
 
 .conv-icon{
   width:36px;height:36px;border-radius:10px;
@@ -193,39 +193,30 @@ body {
   transition:background .15s,color .15s;
 }
 .icon-btn:hover{background:rgba(255,255,255,0.08);color:var(--text)}
-.icon-btn.danger:hover{background:rgba(255,71,87,0.1);color:var(--red)}
-
-/* ─── CHAT AREA ─── */
-.chat-area{display:flex;flex-direction:column;border-radius:20px;overflow:hidden}
+.icon-btn.d/* ─── CHAT AREA ─── */
+.chat-area{display:flex;flex-direction:column;overflow:hidden;background:#efe7dd}
 
 .chat-header{
-  height:64px;padding:0 24px;
+  height:59px;padding:0 16px;
   display:flex;align-items:center;justify-content:space-between;
-  border-bottom:1px solid var(--border);flex-shrink:0;
+  background:#ededed;border-bottom:1px solid rgba(0,0,0,0.08);flex-shrink:0;
 }
-.chat-header-left{display:flex;align-items:center;gap:12px;cursor:pointer}
+.chat-header-left{display:flex;align-items:center;gap:15px;cursor:pointer}
 .chat-header-icon{
-  width:40px;height:40px;border-radius:12px;
+  width:40px;height:40px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
   font-weight:700;font-size:18px;
-  background:rgba(124,92,252,0.1);color:var(--primary);
-  border:1px solid rgba(124,92,252,0.2);transition:all .2s;
+  background:#dfe5e7;color:#54656f;
   flex-shrink:0;
 }
-.chat-header-left:hover .chat-header-icon{transform:scale(1.05);background:rgba(124,92,252,0.2)}
-.chat-header-name{font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:17px;letter-spacing:-.2px}
-.chat-header-desc{font-size:11px;color:var(--muted);margin-top:1px}
-.chat-header-actions{display:flex;align-items:center;gap:6px}
+.chat-header-name{font-weight:600;font-size:16px;color:#111b21}
+.chat-header-desc{font-size:13px;color:#667781;margin-top:1px}
+.chat-header-actions{display:flex;align-items:center;gap:15px}
 .hdr-btn{
-  height:36px;padding:0 14px;border-radius:9px;border:none;
-  cursor:pointer;font-size:12px;font-weight:600;
-  display:flex;align-items:center;gap:6px;transition:all .15s;
+  background:none;border:none;color:#54656f;cursor:pointer;
+  padding:8px;border-radius:50%;transition:background .2s;
 }
-.hdr-btn-ghost{background:rgba(255,255,255,0.05);color:var(--muted)}
-.hdr-btn-ghost:hover{background:rgba(255,255,255,0.1);color:var(--text)}
-.hdr-btn-primary{background:rgba(124,92,252,0.15);color:var(--primary);border:1px solid rgba(124,92,252,0.3)}
-.hdr-btn-primary:hover{background:rgba(124,92,252,0.25)}
-.hdr-btn-danger{background:rgba(255,71,87,0.1);color:var(--red);border:1px solid rgba(255,71,87,0.2);display:none}
+.hdr-btn:hover{background:rgba(0,0,0,0.05)}7,0.2);display:none}
 .hdr-btn-danger:hover{background:rgba(255,71,87,0.2)}
 
 /* ─── MESSAGES ─── */
@@ -262,23 +253,34 @@ body {
 .msg-avatar-spacer{width:36px;flex-shrink:0}
 
 .msg-bubble{
-  max-width:65%;padding:10px 14px;
-  border-radius:16px;font-size:14px;line-height:1.6;
+  max-width:65%;padding:6px 10px 8px;
+  border-radius:7.5px;font-size:14.2px;line-height:1.4;
   position:relative;word-break:break-word;
-  transition:filter .15s;
+  box-shadow: 0 1px 0.5px rgba(11,20,26,0.13);
 }
 .msg-bubble-other{
-  background:var(--card2);color:var(--text);
-  border:1px solid var(--border);
-  border-bottom-left-radius:4px;
+  background:var(--wa-bubble-in);color:#111b21;
+  border-top-left-radius:0;
 }
 .msg-bubble-own{
-  background:linear-gradient(135deg,var(--primary),#9a7aff);
-  color:#fff;border-bottom-right-radius:4px;
-  border:1px solid rgba(255,255,255,0.1);
+  background:var(--wa-bubble-out);
+  color:#111b21;
+  border-top-right-radius:0;
 }
-.msg-bubble-cont-other{border-top-left-radius:4px;border-bottom-left-radius:16px}
-.msg-bubble-cont-own{border-top-right-radius:4px;border-bottom-right-radius:16px}
+/* Bubble tails */
+.msg-bubble-other::before {
+    content: ""; position: absolute; top: 0; left: -8px; 
+    width: 0; height: 0; border: 8px solid transparent; 
+    border-top-color: var(--wa-bubble-in); border-right: 0;
+}
+.msg-bubble-own::after {
+    content: ""; position: absolute; top: 0; right: -8px; 
+    width: 0; height: 0; border: 8px solid transparent; 
+    border-top-color: var(--wa-bubble-out); border-left: 0;
+}
+.msg-bubble-cont-other::before, .msg-bubble-cont-own::after { display: none; }
+.msg-bubble-cont-other { border-top-left-radius: 7.5px; }
+.msg-bubble-cont-own { border-top-right-radius: 7.5px; }
 
 /* Reactions on hover */
 .msg-actions{
@@ -325,45 +327,23 @@ body {
 
 /* ─── INPUT ─── */
 .chat-input-wrap{
-  padding:12px 16px 16px;flex-shrink:0;
-  border-top:1px solid var(--border);
+  padding:10px 16px;background:#f0f2f5;
+  border-top:1px solid rgba(0,0,0,0.05);
 }
 .input-box{
-  display:flex;align-items:flex-end;gap:8px;
-  background:var(--card2);border:1px solid var(--border);
-  border-radius:14px;padding:8px 8px 8px 14px;
-  transition:border-color .2s,box-shadow .2s;
-}
-.input-box:focus-within{
-  border-color:rgba(124,92,252,0.5);
-  box-shadow:0 0 0 3px rgba(124,92,252,0.08);
+  display:flex;align-items:center;gap:12px;
+  background:#fff;border-radius:8px;padding:5px 12px;
 }
 .input-box textarea{
   flex:1;background:transparent;border:none;outline:none;
-  resize:none;font-family:'Inter',sans-serif;font-size:14px;
-  color:var(--text);line-height:1.5;max-height:150px;min-height:36px;
-  padding:6px 0;
+  font-size:15px;color:#111b21;line-height:1.5;max-height:120px;min-height:20px;
+  padding:10px 0;
 }
-.input-box textarea::placeholder{color:var(--dim)}
-.input-extras{display:flex;align-items:center;gap:4px;padding-bottom:4px;flex-shrink:0}
-.input-icon-btn{
-  width:34px;height:34px;border-radius:9px;border:none;
-  background:transparent;color:var(--muted);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:all .15s;font-size:18px;
-}
-.input-icon-btn:hover{background:rgba(255,255,255,0.08);color:var(--text)}
 .send-btn{
-  width:38px;height:38px;border-radius:10px;border:none;
-  background:linear-gradient(135deg,var(--primary),#9a7aff);
-  color:#fff;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:all .15s;box-shadow:0 4px 14px var(--primary-g);
-  flex-shrink:0;
+  width:40px;height:40px;background:none;border:none;
+  color:#54656f;cursor:pointer;display:flex;align-items:center;justify-content:center;
 }
-.send-btn:hover{transform:scale(1.05);box-shadow:0 4px 20px rgba(124,92,252,0.5)}
-.send-btn:active{transform:scale(.95)}
-.send-btn svg{width:18px;height:18px}
+.send-btn:hover { color: var(--wa-green); }
 
 /* ─── SCROLL TO BOTTOM ─── */
 .scroll-bottom-btn{
@@ -540,17 +520,55 @@ body {
   font-size:13px;font-weight:600;margin-bottom:14px;display:none;
 }
 
-/* Login modal special */
-.login-logo{
-  width:72px;height:72px;border-radius:20px;
-  background:linear-gradient(135deg,var(--primary),#a855f7);
-  display:flex;align-items:center;justify-content:center;
-  margin:0 auto 24px;
-  box-shadow:0 8px 32px rgba(124,92,252,0.4);
+/* ─── AUTH SCREEN ─── */
+.auth-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #f0f2f5; display: flex; flex-direction: column;
 }
-.login-logo svg{width:38px;height:38px;color:#fff}
-.login-title{text-align:center;font-family:'Plus Jakarta Sans',sans-serif;font-size:28px;font-weight:800;margin-bottom:6px;letter-spacing:-.5px}
-.login-sub{text-align:center;font-size:13px;color:var(--muted);margin-bottom:28px}
+.auth-top-bar { height: 220px; background: var(--wa-teal); width: 100%; }
+.auth-container {
+    margin: -120px auto 0; width: 100%; max-width: 1000px;
+    background: #fff; border-radius: 3px; box-shadow: 0 17px 50px rgba(0,0,0,0.1);
+    display: flex; height: 500px;
+}
+.auth-left { flex: 1; padding: 60px; border-right: 1px solid #f2f2f2; }
+.auth-right { flex: 1; padding: 60px; background: #fafafa; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+.auth-title { font-size: 28px; font-weight: 300; color: #41525d; margin-bottom: 40px; }
+.auth-input-group { margin-bottom: 20px; }
+.auth-input-group label { display: block; font-size: 14px; color: var(--wa-green); font-weight: 600; margin-bottom: 5px; }
+.auth-input { width: 100%; border: none; border-bottom: 2px solid #e1e9eb; padding: 10px 0; font-size: 16px; outline: none; transition: border-color .2s; }
+.auth-input:focus { border-color: var(--wa-green); }
+.auth-btn { 
+    background: var(--wa-green); color: #fff; border: none; padding: 12px 30px; 
+    border-radius: 3px; font-weight: 600; cursor: pointer; font-size: 14px; 
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 200px;
+}
+.auth-btn:hover { background: #20bd5a; }
+.auth-btn:disabled { background: #a5ebbc; cursor: not-allowed; }
+
+.auth-input-wrapper { position: relative; }
+.auth-eye {
+    position: absolute; right: 0; top: 10px; cursor: pointer; color: #8696a0;
+    padding: 5px; transition: color .2s;
+}
+.auth-eye:hover { color: var(--wa-green); }
+
+.auth-remember { display: flex; align-items: center; gap: 8px; margin-top: 15px; font-size: 13px; color: #667781; cursor: pointer; }
+.auth-remember input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--wa-green); }
+
+.spinner {
+    width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+}
 
 /* ─── TOAST ─── */
 #toast-container{
@@ -613,211 +631,167 @@ body {
 </head>
 <body>
 
-<!-- Background orbs -->
-<div class="orb orb-1"></div>
-<div class="orb orb-2"></div>
-<div class="orb orb-3"></div>
+<!-- Toast container -->
 
 <!-- Toast container -->
 <div id="toast-container"></div>
 
-<!-- Context menu -->
-<div id="ctx-menu">
-  <div class="ctx-item" onclick="ctxCopy()">
-    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/></svg>
-    Copier
+<div class="auth-overlay" id="auth-screen">
+  <div class="auth-top-bar"></div>
+  <div class="auth-container" style="max-width: 500px; height: auto; margin-top: -60px; padding: 40px;">
+    <div style="width: 100%;">
+      <div style="display:flex;align-items:center;gap:15px;margin-bottom:30px;justify-content:center">
+        <div class="logo-icon" style="background:var(--wa-teal);transform:scale(1.1)">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <h2 style="font-weight:700;color:#54656f;letter-spacing:1px">NEXUS WEB</h2>
+      </div>
+      
+      <h1 class="auth-title" style="text-align:center;font-size:22px;margin-bottom:30px">Accédez à la messagerie</h1>
+      
+      <div id="login-error" class="error-msg"></div>
+      
+      <div class="auth-input-group">
+        <label>NOM D'UTILISATEUR</label>
+        <input id="username-input" class="auth-input" type="text" placeholder="Pseudo" maxlength="20" autocomplete="off">
+      </div>
+      
+      <div class="auth-input-group">
+        <label>MOT DE PASSE</label>
+        <input id="password-input" class="auth-input" type="password" placeholder="Mot de passe">
+      </div>
+      
+      <div style="margin-top:30px">
+        <button class="auth-btn" id="join-btn" style="width: 100%; border-radius: 8px;">
+          <div class="spinner" id="auth-spinner"></div>
+          <span id="auth-btn-text">SE CONNECTER / CRÉER UN COMPTE</span>
+        </button>
+      </div>
+      
+      <p style="text-align:center;margin-top:25px;color:#8696a0;font-size:12px">
+        Système distribué NoSQL No-Log<br>
+        <span style="color:#008069;font-weight:600">Sécurisé avec Redis & MongoDB</span>
+      </p>
+    </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════ APP ═══ -->
-<div class="app">
+<div class="app hidden" id="main-app">
 
   <!-- ─── SIDEBAR ─── -->
-  <aside class="sidebar glass" id="sidebar">
-    <!-- Logo -->
+  <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-icon">
-        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="logo-icon" id="my-avatar-mini" onclick="openMyProfile()" style="cursor:pointer">?</div>
+        <span id="my-username" style="font-weight:600;font-size:14px;color:#3b4a54"></span>
       </div>
-      <div>
-        <div class="logo-name"><span>Nexus</span> Chat</div>
-        <span class="logo-badge">NoSQL Engine v2</span>
+      <div style="display:flex;gap:15px">
+        <button class="hdr-btn" title="Ajouter un contact" onclick="openModal('add-contact-modal')">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <button class="hdr-btn" title="Nouveau groupe" onclick="openModal('create-group-modal')">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </button>
+        <button class="hdr-btn" title="Déconnexion" onclick="logout()">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg>
+        </button>
       </div>
     </div>
 
-    <!-- Search -->
     <div class="sidebar-search">
-      <svg class="s-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2.5"/></svg>
-      <input type="text" id="conv-search" placeholder="Rechercher…" oninput="filterConvs(this.value)">
+      <div style="background:#f0f2f5;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:10px">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#54656f" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input type="text" id="conv-search" placeholder="Rechercher ou démarrer une discussion" oninput="filterConvs(this.value)" style="border:none;background:transparent;width:100%;outline:none;font-size:14px">
+      </div>
     </div>
 
-    <!-- Conversations -->
     <div class="sidebar-sections">
-      <!-- Groups section -->
       <div class="section-header" onclick="toggleSection('groups-section','groups-toggle')">
-        <span class="section-title">Salons</span>
+        <span class="section-title">GROUPES</span>
         <svg id="groups-toggle" class="section-toggle open" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5l7 7-7 7" stroke-width="2.5"/></svg>
       </div>
       <ul class="section-list" id="groups-section"></ul>
 
-      <!-- DMs section -->
       <div class="section-header" style="margin-top:8px" onclick="toggleSection('dms-section','dms-toggle')">
-        <span class="section-title">Messages Privés</span>
+        <span class="section-title">DISCUSSIONS PERSONNELLES</span>
         <svg id="dms-toggle" class="section-toggle open" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5l7 7-7 7" stroke-width="2.5"/></svg>
       </div>
       <ul class="section-list" id="dms-section"></ul>
     </div>
-
-    <!-- User Footer -->
-    <div class="sidebar-footer">
-      <div class="user-card" onclick="openMyProfile()">
-        <div class="user-avatar-wrap">
-          <div class="user-avatar" id="my-avatar">?</div>
-          <div class="online-pulse"></div>
-        </div>
-        <div class="user-info">
-          <div class="user-name" id="my-username">Pseudo</div>
-          <div class="user-status">En ligne</div>
-        </div>
-        <div class="user-actions" onclick="event.stopPropagation()">
-          <button class="icon-btn" title="Ajouter un contact" onclick="openModal('add-contact-modal')">
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 4v16m8-8H4" stroke-width="2.5"/></svg>
-          </button>
-          <button class="icon-btn" title="Nouveau groupe" onclick="openModal('create-group-modal')">
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.768-.231-1.48-.643-2.057M7 20v-2a3 3 0 013-3h4a3 3 0 013 3v2M10 10a4 4 0 118 0 4 4 0 01-8 0zM3 10h2m0 0V8m0 2v2" stroke-width="2"/></svg>
-          </button>
-          <button class="icon-btn danger" title="Déconnexion" onclick="logout()">
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-width="2"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </aside>
 
   <!-- ─── CHAT AREA ─── -->
-  <main class="chat-area glass" id="chat-area">
-    <!-- Header -->
+  <main class="chat-area">
     <header class="chat-header">
       <div class="chat-header-left" onclick="openContextInfo()">
         <div class="chat-header-icon" id="header-icon">#</div>
         <div>
-          <div class="chat-header-name" id="header-name">Général</div>
-          <div class="chat-header-desc" id="header-desc">Salon public · synchronisé Redis/TCP</div>
+          <div class="chat-header-name" id="header-name">Sélectionnez un salon</div>
+          <div class="chat-header-desc" id="header-desc">NoSQL distributed channel</div>
         </div>
       </div>
       <div class="chat-header-actions">
-        <button class="hdr-btn hdr-btn-ghost" onclick="openModal('search-modal')">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2.5"/></svg>
-          Recherche
+        <button class="hdr-btn" onclick="openModal('search-modal')" title="Rechercher messages">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </button>
-        <button class="hdr-btn hdr-btn-primary" onclick="socket.emit('get_stats')" id="stats-refresh-btn">
-          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-width="2"/></svg>
-          Stats
+        <button class="hdr-btn" onclick="socket.emit('get_stats')" title="Statistiques NoSQL">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         </button>
-        <button class="hdr-btn hdr-btn-danger" id="ctx-action-btn">Action</button>
+        <button class="hdr-btn" id="ctx-action-btn" style="display:none"></button>
       </div>
     </header>
 
-    <!-- Messages -->
     <div class="messages-wrap" id="messages-wrap" onscroll="onMsgsScroll()">
       <div id="messages-container"></div>
       <div id="scroll-anchor"></div>
-
-      <!-- Scroll to bottom button -->
       <button class="scroll-bottom-btn" id="scroll-bottom-btn" onclick="scrollToBottom()">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" stroke-width="2.5"/></svg>
         <span class="scroll-bottom-badge" id="unread-badge"></span>
       </button>
     </div>
 
-    <!-- Typing indicator -->
     <div class="typing-bar" id="typing-bar">
       <div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-      <span id="typing-text">quelqu'un rédige…</span>
+      <span id="typing-text">rédaction…</span>
     </div>
 
-    <!-- Input -->
     <div class="chat-input-wrap">
-      <div class="input-box" id="input-box">
-        <button class="input-icon-btn" title="Emoji" onclick="insertEmoji()">😊</button>
-        <textarea id="msg-input" rows="1" placeholder="Envoyer un message… (Entrée pour envoyer, Maj+Entrée pour saut de ligne)"></textarea>
-        <div class="input-extras">
-          <button class="send-btn" id="send-btn" title="Envoyer (Entrée)">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.269 20.876L5.999 12zm0 0h7.5"/></svg>
-          </button>
-        </div>
+      <div class="input-box">
+        <button class="hdr-btn" title="Emoji" onclick="insertEmoji()" style="font-size:20px;padding:0">😊</button>
+        <textarea id="msg-input" rows="1" placeholder="Tapez un message"></textarea>
+        <button class="send-btn" id="send-btn">
+          <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.269 20.876L5.999 12zm0 0h7.5"/></svg>
+        </button>
       </div>
     </div>
   </main>
 
   <!-- ─── RIGHT PANEL ─── -->
-  <aside class="right-panel glass" id="right-panel">
-    <!-- Connections -->
+  <aside class="right-panel">
     <div class="panel-section">
-      <div class="panel-title">Connexions</div>
-      <div class="conn-item">
-        <div class="conn-name">MongoDB ReplicaSet</div>
-        <div class="conn-badge ok" id="mongo-status">Connecté</div>
-      </div>
-      <div class="conn-item">
-        <div class="conn-name">Redis Pub/Sub</div>
-        <div class="conn-badge ok" id="redis-status">Connecté</div>
+      <div class="panel-title">MÉTROLOGIE</div>
+      <div class="total-card">
+        <div class="total-label">Messages Totaux (Global)</div>
+        <div class="total-num" id="total-msgs">—</div>
       </div>
     </div>
 
-    <!-- Top Senders -->
     <div class="panel-section">
-      <div class="panel-title">Top Expéditeurs</div>
+      <div class="panel-title">TOP EXPÉDITEURS</div>
       <div id="top-senders"></div>
     </div>
 
-    <!-- Most Solicited -->
     <div class="panel-section">
-      <div class="panel-title">Plus Sollicités (MP)</div>
+      <div class="panel-title">PLUS SOLLICITÉS</div>
       <div id="most-solicited"></div>
     </div>
 
-    <!-- Total -->
     <div class="panel-section">
-      <div class="panel-title">Métriques</div>
-      <div class="total-card">
-        <div class="total-label">Messages traités</div>
-        <div class="total-num" id="total-msgs">—</div>
-        <button class="refresh-btn" onclick="socket.emit('get_stats')">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-width="2.5"/></svg>
-          Actualiser
-        </button>
-      </div>
-    </div>
-
-    <!-- Online users -->
-    <div class="panel-section">
-      <div class="panel-title">En Ligne <span class="online-count-badge" id="online-count">0</span></div>
+      <div class="panel-title">EN LIGNE <span class="online-count-badge" id="online-count">0</span></div>
       <div class="online-list" id="online-list"></div>
     </div>
   </aside>
 
-</div><!-- /app -->
-
-
-<!-- ═══════════════════════════ MODALS ══════════════════════════════ -->
-
-<!-- LOGIN -->
-<div class="modal-overlay" id="login-modal">
-  <div class="modal" style="max-width:420px;text-align:center">
-    <div class="login-logo">
-      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-    </div>
-    <div class="login-title">Nexus Chat</div>
-    <div class="login-sub">NoSQL Distributed Engine — INFO834</div>
-    <div id="login-error" class="error-msg"></div>
-    <div class="field"><input id="username-input" type="text" placeholder="Nom d'utilisateur" maxlength="20" autocomplete="off"></div>
-    <div class="field"><input id="password-input" type="password" placeholder="Mot de passe"></div>
-    <button class="btn btn-primary" id="join-btn" style="margin-top:8px">
-      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" stroke-width="2"/></svg>
-      Connexion / Inscription
-    </button>
-  </div>
 </div>
 
 <!-- SEARCH -->
@@ -959,10 +933,10 @@ const EMOJIS = ['👍','❤️','😂','🔥','🎉','👏','🚀','💯'];
 
 // ─── HELPERS ─────────────────────────────────────────────────────────
 function getColor(s) {
-  if (!s) return '#7c5cfc';
+  if (!s) return '#25D366';
   let h = 0;
   for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
-  const colors = ['#7c5cfc','#00d2ff','#f59e0b','#10b981','#ef4444','#3b82f6','#ec4899','#8b5cf6','#06b6d4','#84cc16'];
+  const colors = ['#25D366','#128C7E','#075E54','#34b7f1','#f59e0b','#ef4444','#ec4899','#8b5cf6'];
   return colors[Math.abs(h) % colors.length];
 }
 
@@ -1131,11 +1105,16 @@ function switchRoom(roomId) {
   document.getElementById('header-icon').textContent = '#';
   document.getElementById('header-icon').style.background = '';
   document.getElementById('header-name').textContent = roomId;
-  document.getElementById('header-desc').textContent = 'Salon public · synchronisé Redis/TCP';
+  document.getElementById('header-desc').textContent = 'Salon public NoSQL';
   clearMessages();
   const btn = document.getElementById('ctx-action-btn');
   if (roomId === 'Général') { btn.style.display = 'none'; }
-  else { btn.style.display = 'flex'; btn.textContent = 'Quitter'; btn.onclick = () => socket.emit('leave_group', { username: currentUser, group_name: roomId }); }
+  else {
+    btn.style.display = 'flex'; btn.textContent = 'Quitter';
+    btn.className = 'hdr-btn';
+    btn.style.color = 'var(--red)';
+    btn.onclick = () => socket.emit('leave_group', { username: currentUser, group_name: roomId });
+  }
   socket.emit('join_room', { username: currentUser, room: roomId });
 }
 
@@ -1144,12 +1123,15 @@ function openMP(peer) {
   setActiveConv(`pm-${peer}`);
   document.getElementById('header-icon').textContent = peer[0].toUpperCase();
   document.getElementById('header-icon').style.background = getColor(peer);
+  document.getElementById('header-icon').style.color = '#fff';
   document.getElementById('header-name').textContent = peer;
-  document.getElementById('header-desc').textContent = 'Discussion privée · chiffrée';
+  document.getElementById('header-desc').textContent = 'Discussion privée sécurisée';
   clearMessages();
   const btn = document.getElementById('ctx-action-btn');
-  btn.style.display = 'flex'; btn.textContent = 'Supprimer le contact'; btn.className = 'hdr-btn hdr-btn-danger';
-  btn.onclick = () => { socket.emit('remove_contact', { username: currentUser, contact: peer }); switchRoom('Général'); };
+  btn.style.display = 'flex'; btn.textContent = 'Supprimer';
+  btn.className = 'hdr-btn';
+  btn.style.color = 'var(--red)';
+  btn.onclick = () => { if(confirm('Supprimer ce contact ?')) { socket.emit('remove_contact', { username: currentUser, contact: peer }); switchRoom('Général'); } };
   const roomId = `pm:${[currentUser, peer].sort().join(':')}`;
   socket.emit('join_room', { username: currentUser, room: roomId });
 }
@@ -1293,20 +1275,55 @@ function insertEmoji() {
 // ════════════════════════ SOCKET.IO EVENTS ═══════════════════════════
 
 socket.on('login_result', data => {
+  console.log("Login result received:", data);
+  const btn = document.getElementById('join-btn');
+  const sp = document.getElementById('auth-spinner');
+  if (btn) btn.disabled = false;
+  if (sp) sp.style.display = 'none';
+
   if (data.success) {
     currentUser = document.getElementById('username-input').value.trim();
-    document.getElementById('my-username').textContent = currentUser;
-    const av = document.getElementById('my-avatar');
-    av.textContent = currentUser[0].toUpperCase();
-    av.style.background = getColor(currentUser);
-    closeModal('login-modal');
-    switchRoom('Général');
-    socket.emit('get_stats');
-    showToast(data.message);
+    console.log("Login success! Current User:", currentUser);
+
+    // 1. IMMEDIATE TRANSITION (High Priority)
+    const authScr = document.getElementById('auth-screen');
+    const mainApp = document.getElementById('main-app');
+    if (authScr) authScr.classList.add('hidden');
+    if (mainApp) mainApp.classList.remove('hidden');
+
+    // 2. OTHER UPDATES (Fail-safe)
+    try {
+        if (document.getElementById('remember-me')?.checked) {
+            localStorage.setItem('nexus_username', currentUser);
+        }
+        const nameEl = document.getElementById('my-username');
+        if (nameEl) nameEl.textContent = currentUser;
+        
+        const avMini = document.getElementById('my-avatar-mini');
+        if (avMini) {
+            avMini.textContent = currentUser[0].toUpperCase();
+            avMini.style.background = getColor(currentUser);
+            avMini.style.color = '#fff';
+        }
+    } catch(e) { console.error("Non-critical UI error:", e); }
+
+    try {
+        switchRoom('Général');
+        socket.emit('get_stats');
+        showToast(data.message);
+    } catch(e) { console.error("Context setup error:", e); }
   } else {
     const err = document.getElementById('login-error');
-    err.textContent = data.message;
-    err.style.display = 'block';
+    if (err) {
+        err.textContent = data.message;
+        err.style.display = 'block';
+    }
+    const cont = document.querySelector('.auth-container');
+    if (cont) {
+        cont.classList.add('shake');
+        setTimeout(() => cont.classList.remove('shake'), 500);
+    }
+    document.getElementById('password-input')?.focus();
   }
 });
 
@@ -1445,8 +1462,8 @@ socket.on('profile_data', data => {
   av.style.background = getColor(data.username);
   const isOnline = onlineUsers.includes(data.username);
   document.getElementById('ci-online-badge').innerHTML = isOnline
-    ? '<span style="color:var(--green);font-weight:600">● En ligne</span>'
-    : '<span style="color:var(--muted)">● Hors ligne</span>';
+    ? '<span style="color:#2563eb;font-weight:600">● En ligne</span>'
+    : '<span style="color:#667781">● Hors ligne</span>';
   document.getElementById('ci-bio').textContent = data.bio || "Salut ! J'utilise Nexus Chat.";
   openModal('contact-info-modal');
 });
@@ -1522,12 +1539,19 @@ document.getElementById('join-btn').addEventListener('click', () => {
   const u = document.getElementById('username-input').value.trim();
   const p = document.getElementById('password-input').value.trim();
   if (!u || !p) return;
+  
+  const btn = document.getElementById('join-btn');
+  const sp = document.getElementById('auth-spinner');
+  btn.disabled = true;
+  sp.style.display = 'block';
   document.getElementById('login-error').style.display = 'none';
+  
   socket.connect();
   socket.emit('connect_user', { username: u, password: p });
 });
 
 document.getElementById('password-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('join-btn').click(); });
+document.getElementById('username-input').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('password-input').focus(); });
 
 // ─── MODALS ACTIONS ───────────────────────────────────────────────────
 document.getElementById('save-bio-btn').addEventListener('click', () => {
@@ -1559,17 +1583,21 @@ document.addEventListener('click', e => {
 // ─── KEYBOARD SHORTCUT: ESC closes modals ─────────────────────────────
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => {
-      if (m.id !== 'login-modal') m.classList.add('hidden');
-    });
+    document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => m.classList.add('hidden'));
     document.getElementById('ctx-menu').style.display = 'none';
   }
 });
 
 // ─── INIT ─────────────────────────────────────────────────────────────
-// Focus username on load
 window.addEventListener('load', () => {
-  setTimeout(() => document.getElementById('username-input').focus(), 300);
+  // Load remembered user
+  const saved = localStorage.getItem('nexus_username');
+  if (saved) {
+    document.getElementById('username-input').value = saved;
+    setTimeout(() => document.getElementById('password-input').focus(), 300);
+  } else {
+    setTimeout(() => document.getElementById('username-input').focus(), 300);
+  }
 });
 </script>
 </body>

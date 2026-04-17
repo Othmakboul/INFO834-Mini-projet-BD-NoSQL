@@ -75,8 +75,10 @@ def index():
 def handle_connect(data):
     username = data.get('username')
     password = data.get('password')
+    
     if username and password:
         success, msg = mongo.register_or_login(username, password)
+            
         if not success:
             emit('login_result', {'success': False, 'message': msg})
             return
@@ -97,8 +99,8 @@ def handle_connect(data):
 def handle_disconnect():
     keys = redis_c.keys("sid:*")
     for key in keys:
-        if redis_c.get(key).decode('utf-8') == request.sid:
-            username = key.decode('utf-8').split(":")[1]
+        if redis_c.get(key) == request.sid:
+            username = key.split(":")[1]
             redis_c.delete(f"user:{username}")
             redis_c.delete(f"sid:{username}")
             emit('status_update', {'users': get_online_users()}, broadcast=True)
@@ -130,7 +132,7 @@ def handle_message(data):
             target_sid = redis_c.get(f"sid:{target}")
             payload = {'username': user, 'message': msg, 'time': now, 'room': room_id, 'is_private': True, 'target': target}
             if target_sid:
-                emit('new_msg', payload, room=target_sid.decode('utf-8'))
+                emit('new_msg', payload, room=target_sid)
             emit('new_msg', payload, room=request.sid)
         else:
             mongo.save_message(user, "GLOBAL", msg, room=room)
@@ -147,7 +149,7 @@ def handle_add_contact(data):
         emit('conversations_data', mongo.get_user_conversations(user), room=request.sid)
         target_sid = redis_c.get(f"sid:{contact}")
         if target_sid:
-            sid_str = target_sid.decode('utf-8')
+            sid_str = target_sid
             emit('conversations_data', mongo.get_user_conversations(contact), room=sid_str)
             emit('notification', {'success': True, 'message': f"{user} vous a ajouté !"}, room=sid_str)
 
@@ -173,7 +175,7 @@ def handle_create_group(data):
         for m in list(set([creator] + mems)):
             sid = redis_c.get(f"sid:{m}")
             if sid:
-                sid_str = sid.decode('utf-8')
+                sid_str = sid
                 emit('conversations_data', mongo.get_user_conversations(m), room=sid_str)
                 socketio.server.enter_room(sid_str, gn, namespace='/')
                 emit('new_msg', {'username': "Système", 'message': f"Groupe {gn} rejoint.", 'time': datetime.datetime.now().strftime("%H:%M"), 'room': gn}, room=sid_str)
@@ -214,7 +216,7 @@ def handle_add_group_members(data):
         for m in added:
             sid = redis_c.get(f"sid:{m}")
             if sid:
-                sid_str = sid.decode('utf-8')
+                sid_str = sid
                 emit('conversations_data', mongo.get_user_conversations(m), room=sid_str)
                 socketio.server.enter_room(sid_str, gn, namespace='/')
                 emit('new_msg', {'username': "Système", 'message': f"Ajouté à {gn}.", 'time': now, 'room': gn}, room=sid_str)
@@ -229,7 +231,7 @@ def handle_kick_group_member(data):
         emit('group_members_updated', {'group_name': gn}, room=request.sid)
         target_sid = redis_c.get(f"sid:{target}")
         if target_sid:
-            sid_str = target_sid.decode('utf-8')
+            sid_str = target_sid
             socketio.server.leave_room(sid_str, gn, namespace='/')
             emit('conversations_data', mongo.get_user_conversations(target), room=sid_str)
             emit('kicked_from_group', {'group_name': gn}, room=sid_str)
@@ -259,7 +261,7 @@ def handle_search_users(data):
 
 def get_online_users():
     keys = redis_c.keys("user:*")
-    return sorted([k.decode('utf-8').split(":")[1] for k in keys])
+    return sorted([k.split(":")[1] for k in keys])
 
 if __name__ == "__main__":
     print("🚀 Serveur lancé sur http://127.0.0.1:5001")
