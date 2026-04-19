@@ -8,6 +8,7 @@ from mongodb_manager import MongoManager
 import datetime
 import hashlib
 import threading
+import json
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret_zak_pro'
@@ -20,31 +21,57 @@ redis_c = get_redis_client()
 def ecouter_redis_pour_web():
     """Écoute Redis et envoie les messages au Web via Socket.IO"""
     pubsub = redis_c.pubsub()
-    pubsub.subscribe('chat_room:Général')
-    print("[*] Web Chat écoute sur le canal Redis 'chat_room:Général'")
+    pubsub.subscribe('chat_room:Général', 'bridge:pm')
+    print("[*] Web Chat écoute sur 'chat_room:Général' et 'bridge:pm'")
     
     for message in pubsub.listen():
         if message['type'] == 'message':
+            canal = message['channel'].decode('utf-8') if isinstance(message['channel'], bytes) else message['channel']
             data = message['data']
             if isinstance(data, bytes):
                 data = data.decode('utf-8')
                 
-            # On ne traite que les messages venant du serveur TCP
-            if data.startswith('[TCP]'):
-                msg_content_raw = data.replace('[TCP] ', '')
-                if ": " in msg_content_raw:
-                    parts = msg_content_raw.split(": ", 1)
-                    username = parts[0]
-                    msg_content = parts[1]
-                    
-                    # On émet vers tout le monde sur le site web
-                    now = datetime.datetime.now().strftime("%H:%M")
-                    socketio.emit('new_msg', {
-                        'username': username,
-                        'message': msg_content,
-                        'time': now,
-                        'room': 'Général'
-                    }, room='Général')
+            if canal == 'chat_room:Général':
+                # On ne traite que les messages venant du serveur TCP
+                if data.startswith('[TCP]'):
+                    msg_content_raw = data.replace('[TCP] ', '')
+                    if ": " in msg_content_raw:
+                        parts = msg_content_raw.split(": ", 1)
+                        username = parts[0]
+                        msg_content = parts[1]
+                        now = datetime.datetime.now().strftime("%H:%M")
+                        socketio.emit('new_msg', {
+                            'username': username,
+                            'message': msg_content,
+                            'time': now,
+                            'room': 'Général'
+                        }, room='Général')
+            
+            elif canal == 'bridge:pm':
+                try:
+                    payload = json.loads(data)
+                    if payload.get('origin') == 'TCP':
+                        sender = payload.get('sender')
+                        receiver = payload.get('receiver')
+                        content = payload.get('content')
+                        time_str = payload.get('timestamp', datetime.datetime.now().strftime("%H:%M"))
+                        room_id = f"pm:{min(sender, receiver)}:{max(sender, receiver)}"
+                        
+                        target_sid = redis_c.get(f"sid:{receiver}")
+                        if target_sid:
+                            sid_str = target_sid.decode('utf-8') if isinstance(target_sid, bytes) else target_sid
+                            socketio.emit('new_msg', {
+                                'username': sender,
+                                'message': content,
+                                'time': time_str,
+                                'room': room_id,
+                                'is_private': True,
+                                'target': receiver
+                            }, room=sid_str)
+                            # On rafraîchit la liste des conversations pour que le nouveau contact apparaisse
+                            socketio.emit('conversations_data', mongo.get_user_conversations(receiver), room=sid_str)
+                except Exception as e:
+                    print(f"Error in Redis listener: {e}")
 
 # Lancement de la tâche de fond avec eventlet
 eventlet.spawn(ecouter_redis_pour_web)
@@ -96,7 +123,7 @@ def handle_connect(data):
         emit('status_update', {'users': get_online_users()}, broadcast=True)
 
 @socketio.on('disconnect')
-def handle_disconnect():
+def handle_disconnect(*args):
     keys = redis_c.keys("sid:*")
     for key in keys:
         if redis_c.get(key) == request.sid:
@@ -129,10 +156,21 @@ def handle_message(data):
         if is_private and target:
             room_id = f"pm:{min(user, target)}:{max(user, target)}"
             mongo.save_message(user, target, msg, room=room_id)
+            
+            # --- SYNC VERS TCP via REDIS ---
+            pm_payload = json.dumps({
+                'sender': user,
+                'receiver': target,
+                'content': msg,
+                'origin': 'WEB',
+                'timestamp': now
+            })
+            redis_c.publish('bridge:pm', pm_payload)
+            
             target_sid = redis_c.get(f"sid:{target}")
             payload = {'username': user, 'message': msg, 'time': now, 'room': room_id, 'is_private': True, 'target': target}
             if target_sid:
-                emit('new_msg', payload, room=target_sid)
+                socketio.emit('new_msg', payload, room=target_sid.decode('utf-8') if isinstance(target_sid, bytes) else target_sid)
             emit('new_msg', payload, room=request.sid)
         else:
             mongo.save_message(user, "GLOBAL", msg, room=room)

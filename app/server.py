@@ -1,5 +1,7 @@
 import socket
 import threading
+import json
+import datetime
 from database import get_redis_client
 from mongodb_manager import MongoManager
 
@@ -30,22 +32,46 @@ def diffuser_message(message, client_expediteur=None):
 
 def ecouter_redis_pour_tcp():
     """Écoute les messages venant du Web via Redis et les affiche au Terminal."""
-    pubsub = redis_client.pubsub()
-    pubsub.subscribe('chat_room:Général')
-    for message in pubsub.listen():
-        if message['type'] == 'message':
-            data = message['data']
-            if isinstance(data, bytes):
-                data = data.decode('utf-8')
-            # On n'affiche que les messages venant du WEB
-            if data.startswith('[WEB]'):
-                msg_formate = f"\n{data}\n> ".encode('utf-8')
-                diffuser_message(msg_formate)
-                print(f"\n{data}")
+    import time
+    while True:
+        try:
+            pubsub = redis_client.pubsub()
+            pubsub.subscribe('chat_room:Général', 'bridge:pm')
+            for message in pubsub.listen():
+                if message['type'] == 'message':
+                    canal = message['channel'].decode('utf-8') if isinstance(message['channel'], bytes) else message['channel']
+                    data = message['data']
+                    if isinstance(data, bytes):
+                        data = data.decode('utf-8')
+
+                    if canal == 'chat_room:Général':
+                        # On n'affiche que les messages venant du WEB
+                        if data.startswith('[WEB]'):
+                            msg_formate = f"\n{data}\n> ".encode('utf-8')
+                            diffuser_message(msg_formate)
+                            print(f"\n{data}")
+                    
+                    elif canal == 'bridge:pm':
+                        try:
+                            payload = json.loads(data)
+                            sender = payload.get('sender')
+                            receiver = payload.get('receiver')
+                            content = payload.get('content')
+                            origin = payload.get('origin', 'WEB')
+                            
+                            # Si ça vient du WEB et que c'est pour un utilisateur TCP ici
+                            if origin == 'WEB':
+                                msg_prive = f"\n[Privé] {sender} -> {receiver}: {content}\n> ".encode('utf-8')
+                                envoyer_message_prive(msg_prive, receiver)
+                        except:
+                            pass
+        except Exception as e:
+            time.sleep(2)
+            continue
 
 
-def envoyer_message_prive(message, pseudo_destinataire, client_expediteur):
-    """Envoie un message privé à un utilisateur spécifique."""
+def envoyer_message_prive(message, pseudo_destinataire, client_expediteur=None):
+    """Envoie un message privé à un utilisateur spécifique s'il est sur TCP."""
     with lock:
         socket_destinataire = next(
             (sock for sock, pseudo in clients_connectes.items() if pseudo == pseudo_destinataire),
@@ -128,15 +154,28 @@ def gerer_client(client_socket, adresse):
                 if len(parties) == 2:
                     destinataire, contenu = parties
                     try:
-                        mongo_manager.save_message(sender=pseudo, receiver=destinataire, content=contenu, room=f"pm:{min(pseudo, destinataire)}:{max(pseudo, destinataire)}")
-                    except Exception as e:
-                        print(f"[WARN] MongoDB save_message échoué: {e}")
-                    msg_prive = f"[Privé] {pseudo} -> {destinataire}: {contenu}".encode('utf-8')
-                    succes = envoyer_message_prive(msg_prive, destinataire, client_socket)
-                    if succes:
+                        # 1. Enregistrement MongoDB
+                        room_pm = f"pm:{min(pseudo, destinataire)}:{max(pseudo, destinataire)}"
+                        mongo_manager.save_message(sender=pseudo, receiver=destinataire, content=contenu, room=room_pm)
+                        
+                        # 2. Envoi vers le WEB via Redis
+                        pm_payload = json.dumps({
+                            'sender': pseudo,
+                            'receiver': destinataire,
+                            'content': contenu,
+                            'origin': 'TCP',
+                            'timestamp': datetime.datetime.now().strftime("%H:%M")
+                        })
+                        redis_client.publish('bridge:pm', pm_payload)
+                        
+                        # 3. Envoi local (TCP -> TCP)
+                        msg_prive = f"[Privé] {pseudo} -> {destinataire}: {contenu}".encode('utf-8')
+                        succes_tcp = envoyer_message_prive(msg_prive, destinataire, client_socket)
+                        
                         client_socket.send(f"[Privé envoyé à {destinataire}]: {contenu}".encode('utf-8'))
-                    else:
-                        client_socket.send(f"Utilisateur '{destinataire}' introuvable ou déconnecté.".encode('utf-8'))
+                    except Exception as e:
+                        print(f"[ERROR] Erreur /msg: {e}")
+                        client_socket.send("Erreur lors de l'envoi du message.".encode('utf-8'))
                 else:
                     client_socket.send("Usage: /msg <pseudo> <message>".encode('utf-8'))
 

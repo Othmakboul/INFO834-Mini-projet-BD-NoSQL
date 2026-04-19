@@ -198,8 +198,20 @@ class MongoManager:
 
     def get_user_conversations(self, username):
         user = self.users.find_one({"_id": username})
-        if not user: return {"contacts": [], "groups": ["Général"]}
-        return {"contacts": user.get("contacts", []), "groups": user.get("groups", ["Général"])}
+        if not user: 
+            return {"contacts": [], "groups": ["Général"]}
+        
+        # Récupérer les contacts explicites
+        contacts = set(user.get("contacts", []))
+        
+        # Récupérer aussi tous ceux avec qui on a un historique (pour afficher les nouveaux MP)
+        # On cherche tous les messages où l'utilisateur est soit expéditeur soit destinataire (hors GLOBAL)
+        recent_pms = self.collection.distinct("sender", {"receiver": username})
+        for c in recent_pms:
+            if c != "Tous" and c != "GLOBAL":
+                contacts.add(c)
+        
+        return {"contacts": sorted(list(contacts)), "groups": user.get("groups", ["Général"])}
 
     def search_users(self, prefix):
         results = self.users.find({"_id": {"$regex": f"^{prefix}", "$options": "i"}}).limit(5)
